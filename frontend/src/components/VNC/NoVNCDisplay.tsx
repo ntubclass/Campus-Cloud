@@ -1,0 +1,290 @@
+import { useEffect, useRef, useState } from "react"
+
+interface NoVNCDisplayProps {
+  vmid: number
+  onDisconnect?: () => void
+  controls?: {
+    viewOnly?: boolean
+    scaleViewport?: boolean
+    resizeSession?: boolean
+    showDotCursor?: boolean
+    clipViewport?: boolean
+    dragViewport?: boolean
+    qualityLevel?: number
+    compressionLevel?: number
+  }
+}
+
+type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error"
+
+interface RFBInstance {
+  viewOnly: boolean
+  scaleViewport: boolean
+  resizeSession: boolean
+  showDotCursor: boolean
+  clipViewport: boolean
+  dragViewport: boolean
+  qualityLevel: number
+  compressionLevel: number
+  disconnect: () => void
+  sendCtrlAltDel: () => void
+  clipboardPasteFrom: (text: string) => void
+  addEventListener: (event: string, callback: (e: CustomEvent) => void) => void
+}
+
+export default function useNoVNCDisplay({
+  vmid,
+  onDisconnect,
+  controls,
+}: NoVNCDisplayProps) {
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const rfbRef = useRef<RFBInstance | null>(null)
+  const wsRef = useRef<WebSocket | null>(null)
+  const [status, setStatus] = useState<ConnectionStatus>("connecting")
+  const [error, setError] = useState("")
+
+  const viewOnly = controls?.viewOnly ?? false
+  const scaleViewport = controls?.scaleViewport ?? true
+  const resizeSession = controls?.resizeSession ?? true
+  const showDotCursor = controls?.showDotCursor ?? false
+  const clipViewport = controls?.clipViewport ?? false
+  const dragViewport = controls?.dragViewport ?? false
+  const qualityLevel = controls?.qualityLevel ?? 6
+  const compressionLevel = controls?.compressionLevel ?? 6
+
+  useEffect(() => {
+    if (!vmid || !canvasRef.current) return
+
+    setStatus("connecting")
+    setError("")
+
+    let rfb: RFBInstance | null = null
+    let ws: WebSocket | null = null
+    let isSubscribed = true
+    let ticketReceived = false
+
+    const initVNC = async () => {
+      try {
+        const RFBModule = await import("@novnc/novnc/lib/rfb")
+        const RFB = RFBModule.default
+
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+        const wsUrl = `${protocol}//${window.location.hostname}:8090/ws/vnc/${vmid}`
+        console.log("Connecting to backend WebSocket:", wsUrl)
+
+        ws = new WebSocket(wsUrl)
+        wsRef.current = ws
+
+        ws.onopen = () => {
+          console.log("✅ Backend WebSocket connected")
+        }
+
+        ws.onmessage = async (event) => {
+          try {
+            const data = JSON.parse(event.data)
+
+            if (data.type === "vnc_ticket") {
+              console.log("✅ Received VNC ticket from backend")
+              ticketReceived = true
+
+              const container = canvasRef.current
+              if (!container || !ws) return
+
+              rfb = new RFB(container, ws, {
+                shared: true,
+                credentials: { password: data.ticket },
+              })
+
+              rfb.scaleViewport = scaleViewport
+              rfb.resizeSession = resizeSession
+              rfb.viewOnly = viewOnly
+              rfb.qualityLevel = qualityLevel
+              rfb.compressionLevel = compressionLevel
+              rfb.showDotCursor = showDotCursor
+              rfb.clipViewport = clipViewport
+              rfb.dragViewport = dragViewport
+
+              rfb.addEventListener("connect", () => {
+                if (!isSubscribed) return
+                setStatus("connected")
+                setError("")
+                console.log("✅ noVNC connected successfully")
+              })
+
+              rfb.addEventListener("disconnect", (e: CustomEvent) => {
+                if (!isSubscribed) return
+                setStatus("disconnected")
+                if (e.detail.clean) {
+                  console.log("✅ noVNC disconnected cleanly")
+                  setError("連接已正常關閉")
+                } else {
+                  const errorMsg = e.detail?.reason || "WebSocket 連接意外中斷"
+                  setError(`連接已斷開: ${errorMsg}`)
+                  console.error("❌ noVNC disconnected with error:", e.detail)
+                }
+              })
+
+              rfb.addEventListener("securityfailure", (e: CustomEvent) => {
+                if (!isSubscribed) return
+                setStatus("error")
+                setError(`安全驗證失敗: ${e.detail.reason || "未知原因"}`)
+                console.error("❌ noVNC security failure:", e.detail)
+              })
+
+              rfb.addEventListener("credentialsrequired", () => {
+                if (!isSubscribed) return
+                console.error("❌ Credentials required")
+                setStatus("error")
+                setError("VNC 認證失敗：請檢查後端是否正確獲取了 VNC ticket")
+              })
+
+              rfbRef.current = rfb
+              console.log("noVNC RFB instance created with existing WebSocket")
+            }
+          } catch {
+            console.debug("Received non-JSON message (possibly binary data)")
+          }
+        }
+
+        ws.onerror = (wsError) => {
+          console.error("❌ Backend WebSocket error:", wsError)
+          if (!ticketReceived) {
+            setStatus("error")
+            setError("無法連接到後端 WebSocket")
+          }
+        }
+
+        ws.onclose = (event) => {
+          console.log("Backend WebSocket closed:", event.code, event.reason)
+          if (!ticketReceived && isSubscribed) {
+            setStatus("error")
+            setError("WebSocket 連接已關閉")
+          }
+        }
+      } catch (err) {
+        if (!isSubscribed) return
+        setStatus("error")
+        setError(`初始化連接失敗: ${(err as Error).message}`)
+        console.error("Connection initialization error:", err)
+      }
+    }
+
+    initVNC()
+
+    return () => {
+      console.log("Cleaning up connections")
+      isSubscribed = false
+      if (rfbRef.current) {
+        rfbRef.current.disconnect()
+        rfbRef.current = null
+      }
+      if (wsRef.current) {
+        wsRef.current.close()
+        wsRef.current = null
+      }
+    }
+  }, [
+    vmid,
+    scaleViewport,
+    resizeSession,
+    viewOnly,
+    qualityLevel,
+    compressionLevel,
+    showDotCursor,
+    clipViewport,
+    dragViewport,
+  ])
+
+  const handleDisconnect = () => {
+    if (rfbRef.current) {
+      rfbRef.current.disconnect()
+    }
+    onDisconnect?.()
+  }
+
+  const sendCtrlAltDel = () => {
+    rfbRef.current?.sendCtrlAltDel()
+  }
+
+  const toggleFullscreen = () => {
+    const container = canvasRef.current
+    if (!container) return
+
+    if (!document.fullscreenElement) {
+      container.requestFullscreen().catch((err) => {
+        console.error("無法進入全螢幕:", err)
+      })
+    } else {
+      document.exitFullscreen()
+    }
+  }
+
+  const handleClipboard = () => {
+    if (rfbRef.current) {
+      navigator.clipboard
+        .readText()
+        .then((text) => {
+          rfbRef.current?.clipboardPasteFrom(text)
+        })
+        .catch((err) => {
+          console.error("無法讀取剪貼簿:", err)
+        })
+    }
+  }
+
+  return {
+    status,
+    error,
+    canvasRef,
+    handleDisconnect,
+    sendCtrlAltDel,
+    toggleFullscreen,
+    handleClipboard,
+  }
+}
+
+export function NoVNCDisplayComponent({
+  vmid,
+  onDisconnect,
+  controls,
+}: NoVNCDisplayProps) {
+  const { status, error, canvasRef } = useNoVNCDisplay({
+    vmid,
+    onDisconnect,
+    controls,
+  })
+
+  return (
+    <div className="relative w-full h-full bg-black">
+      {status === "connecting" && !error && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 z-20">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 bg-blue-500 rounded-full animate-pulse" />
+            </div>
+          </div>
+          <div className="mt-6 text-white text-lg font-medium">
+            正在連接 VNC...
+          </div>
+          <div className="mt-2 text-gray-400 text-sm">請稍候</div>
+        </div>
+      )}
+
+      {error && (
+        <div className="absolute top-4 left-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-10">
+          {error}
+        </div>
+      )}
+
+      <div
+        ref={canvasRef}
+        className="w-full h-full bg-black"
+        style={{
+          minHeight: "600px",
+          position: "relative",
+        }}
+      />
+    </div>
+  )
+}

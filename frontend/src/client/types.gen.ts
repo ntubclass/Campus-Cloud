@@ -13,36 +13,32 @@ export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
 
-export type ItemCreate = {
-    title: string;
-    description?: (string | null);
-};
-
-export type ItemPublic = {
-    title: string;
-    description?: (string | null);
-    id: string;
-    owner_id: string;
-    created_at?: (string | null);
-};
-
-export type ItemsPublic = {
-    data: Array<ItemPublic>;
-    count: number;
-};
-
-export type ItemUpdate = {
-    title?: (string | null);
-    description?: (string | null);
-};
-
+/**
+ * 通用訊息回應
+ */
 export type Message = {
     message: string;
 };
 
+/**
+ * 重設密碼請求
+ */
 export type NewPassword = {
     token: string;
     new_password: string;
+};
+
+/**
+ * Proxmox node information.
+ */
+export type NodeSchema = {
+    node: string;
+    status: string;
+    cpu?: (number | null);
+    maxcpu?: (number | null);
+    mem?: (number | null);
+    maxmem?: (number | null);
+    uptime?: (number | null);
 };
 
 export type PrivateUserCreate = {
@@ -52,16 +48,35 @@ export type PrivateUserCreate = {
     is_verified?: boolean;
 };
 
+/**
+ * Terminal console connection information for LXC containers.
+ */
+export type TerminalInfoSchema = {
+    vmid: number;
+    ws_url: string;
+    ticket?: (string | null);
+    message: string;
+};
+
+/**
+ * JWT 存取權杖回應
+ */
 export type Token = {
     access_token: string;
     token_type?: string;
 };
 
+/**
+ * 更新密碼請求
+ */
 export type UpdatePassword = {
     current_password: string;
     new_password: string;
 };
 
+/**
+ * 建立使用者時接收的資料
+ */
 export type UserCreate = {
     email: string;
     is_active?: boolean;
@@ -70,6 +85,9 @@ export type UserCreate = {
     password: string;
 };
 
+/**
+ * API 回傳的使用者資料
+ */
 export type UserPublic = {
     email: string;
     is_active?: boolean;
@@ -79,17 +97,26 @@ export type UserPublic = {
     created_at?: (string | null);
 };
 
+/**
+ * 使用者自行註冊時使用的資料
+ */
 export type UserRegister = {
     email: string;
     password: string;
     full_name?: (string | null);
 };
 
+/**
+ * API 回傳的使用者列表
+ */
 export type UsersPublic = {
     data: Array<UserPublic>;
     count: number;
 };
 
+/**
+ * 更新使用者時接收的資料
+ */
 export type UserUpdate = {
     email?: (string | null);
     is_active?: boolean;
@@ -98,6 +125,9 @@ export type UserUpdate = {
     password?: (string | null);
 };
 
+/**
+ * 使用者更新自己資料時使用
+ */
 export type UserUpdateMe = {
     full_name?: (string | null);
     email?: (string | null);
@@ -109,37 +139,31 @@ export type ValidationError = {
     type: string;
 };
 
-export type ItemsReadItemsData = {
-    limit?: number;
-    skip?: number;
+/**
+ * Virtual machine information.
+ */
+export type VMSchema = {
+    vmid: number;
+    name: string;
+    status: string;
+    node: string;
+    type: string;
+    cpu?: (number | null);
+    maxcpu?: (number | null);
+    mem?: (number | null);
+    maxmem?: (number | null);
+    uptime?: (number | null);
 };
 
-export type ItemsReadItemsResponse = (ItemsPublic);
-
-export type ItemsCreateItemData = {
-    requestBody: ItemCreate;
+/**
+ * VNC console connection information.
+ */
+export type VNCInfoSchema = {
+    vmid: number;
+    ws_url: string;
+    ticket?: (string | null);
+    message: string;
 };
-
-export type ItemsCreateItemResponse = (ItemPublic);
-
-export type ItemsReadItemData = {
-    id: string;
-};
-
-export type ItemsReadItemResponse = (ItemPublic);
-
-export type ItemsUpdateItemData = {
-    id: string;
-    requestBody: ItemUpdate;
-};
-
-export type ItemsUpdateItemResponse = (ItemPublic);
-
-export type ItemsDeleteItemData = {
-    id: string;
-};
-
-export type ItemsDeleteItemResponse = (Message);
 
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;
@@ -166,6 +190,32 @@ export type LoginRecoverPasswordHtmlContentData = {
 };
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
+
+export type MachineListNodesResponse = (Array<NodeSchema>);
+
+export type MachineListVmsData = {
+    node?: (string | null);
+};
+
+export type MachineListVmsResponse = (Array<VMSchema>);
+
+export type MachineGetVmInfoData = {
+    vmid: number;
+};
+
+export type MachineGetVmInfoResponse = (VMSchema);
+
+export type MachineGetVmConsoleData = {
+    vmid: number;
+};
+
+export type MachineGetVmConsoleResponse = (VNCInfoSchema);
+
+export type MachineGetLxcTerminalData = {
+    vmid: number;
+};
+
+export type MachineGetLxcTerminalResponse = (TerminalInfoSchema);
 
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;

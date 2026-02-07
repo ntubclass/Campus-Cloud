@@ -94,6 +94,11 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
 
+    PROXMOX_HOST: str = "localhost"
+    PROXMOX_USER: str = "root@pam"
+    PROXMOX_PASSWORD: str = ""
+    PROXMOX_VERIFY_SSL: bool = False
+
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
             message = (

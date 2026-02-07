@@ -8,7 +8,6 @@ CRUD 模組
 所有函數均從此處匯出，保持向後相容性。
 """
 
-from .item import create_item
 from .user import (
     DUMMY_HASH,
     authenticate,

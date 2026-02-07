@@ -1,9 +1,11 @@
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
+from app.api.websocket import vnc_proxy
+from app.api.websocket.terminal import terminal_proxy
 from app.core.config import settings
 
 
@@ -20,7 +22,6 @@ app = FastAPI(
     generate_unique_id_function=custom_generate_unique_id,
 )
 
-# Set all CORS enabled origins
 if settings.all_cors_origins:
     app.add_middleware(
         CORSMiddleware,
@@ -31,3 +32,13 @@ if settings.all_cors_origins:
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+@app.websocket("/ws/vnc/{vmid}")
+async def websocket_vnc_proxy(websocket: WebSocket, vmid: int):
+    await vnc_proxy(websocket, vmid)
+
+
+@app.websocket("/ws/terminal/{vmid}")
+async def websocket_terminal_proxy(websocket: WebSocket, vmid: int):
+    await terminal_proxy(websocket, vmid)

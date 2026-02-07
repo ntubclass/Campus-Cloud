@@ -3,118 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
-
-export class ItemsService {
-    /**
-     * Read Items
-     * Retrieve items.
-     * @param data The data for the request.
-     * @param data.skip
-     * @param data.limit
-     * @returns ItemsPublic Successful Response
-     * @throws ApiError
-     */
-    public static readItems(data: ItemsReadItemsData = {}): CancelablePromise<ItemsReadItemsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/items/',
-            query: {
-                skip: data.skip,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Create Item
-     * Create new item.
-     * @param data The data for the request.
-     * @param data.requestBody
-     * @returns ItemPublic Successful Response
-     * @throws ApiError
-     */
-    public static createItem(data: ItemsCreateItemData): CancelablePromise<ItemsCreateItemResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/items/',
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Read Item
-     * Get item by ID.
-     * @param data The data for the request.
-     * @param data.id
-     * @returns ItemPublic Successful Response
-     * @throws ApiError
-     */
-    public static readItem(data: ItemsReadItemData): CancelablePromise<ItemsReadItemResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/items/{id}',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Update Item
-     * Update an item.
-     * @param data The data for the request.
-     * @param data.id
-     * @param data.requestBody
-     * @returns ItemPublic Successful Response
-     * @throws ApiError
-     */
-    public static updateItem(data: ItemsUpdateItemData): CancelablePromise<ItemsUpdateItemResponse> {
-        return __request(OpenAPI, {
-            method: 'PUT',
-            url: '/api/v1/items/{id}',
-            path: {
-                id: data.id
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete Item
-     * Delete an item.
-     * @param data The data for the request.
-     * @param data.id
-     * @returns Message Successful Response
-     * @throws ApiError
-     */
-    public static deleteItem(data: ItemsDeleteItemData): CancelablePromise<ItemsDeleteItemResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/items/{id}',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-}
+import type { LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, MachineListNodesResponse, MachineListVmsData, MachineListVmsResponse, MachineGetVmInfoData, MachineGetVmInfoResponse, MachineGetVmConsoleData, MachineGetVmConsoleResponse, MachineGetLxcTerminalData, MachineGetLxcTerminalResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class LoginService {
     /**
@@ -205,6 +94,120 @@ export class LoginService {
             url: '/api/v1/password-recovery-html-content/{email}',
             path: {
                 email: data.email
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class MachineService {
+    /**
+     * List Nodes
+     * @returns NodeSchema Successful Response
+     * @throws ApiError
+     */
+    public static listNodes(): CancelablePromise<MachineListNodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/machine/nodes'
+        });
+    }
+    
+    /**
+     * List Vms
+     * @param data The data for the request.
+     * @param data.node
+     * @returns VMSchema Successful Response
+     * @throws ApiError
+     */
+    public static listVms(data: MachineListVmsData = {}): CancelablePromise<MachineListVmsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/machine/vms',
+            query: {
+                node: data.node
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Vm Info
+     * @param data The data for the request.
+     * @param data.vmid
+     * @returns VMSchema Successful Response
+     * @throws ApiError
+     */
+    public static getVmInfo(data: MachineGetVmInfoData): CancelablePromise<MachineGetVmInfoResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/machine/{vmid}',
+            path: {
+                vmid: data.vmid
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Vm Console
+     * Get VNC console connection information for a VM.
+     *
+     * This endpoint returns the WebSocket URL that the frontend should connect to.
+     * The actual VNC connection is proxied through WebSocket at /ws/vnc/{vmid}/
+     *
+     * Args:
+     * vmid: Virtual machine ID
+     *
+     * Returns:
+     * WebSocket URL for connecting to the VM console
+     * @param data The data for the request.
+     * @param data.vmid
+     * @returns VNCInfoSchema Successful Response
+     * @throws ApiError
+     */
+    public static getVmConsole(data: MachineGetVmConsoleData): CancelablePromise<MachineGetVmConsoleResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/machine/{vmid}/console',
+            path: {
+                vmid: data.vmid
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Lxc Terminal
+     * Get terminal console connection information for an LXC container.
+     *
+     * This endpoint returns the WebSocket URL that the frontend should connect to.
+     * The actual terminal connection is proxied through WebSocket at /ws/terminal/{vmid}/
+     *
+     * Args:
+     * vmid: LXC container ID
+     *
+     * Returns:
+     * WebSocket URL for connecting to the container terminal
+     * @param data The data for the request.
+     * @param data.vmid
+     * @returns TerminalInfoSchema Successful Response
+     * @throws ApiError
+     */
+    public static getLxcTerminal(data: MachineGetLxcTerminalData): CancelablePromise<MachineGetLxcTerminalResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/machine/{vmid}/terminal',
+            path: {
+                vmid: data.vmid
             },
             errors: {
                 422: 'Validation Error'

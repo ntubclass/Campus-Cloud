@@ -71,131 +71,6 @@ export const HTTPValidationErrorSchema = {
     title: 'HTTPValidationError'
 } as const;
 
-export const ItemCreateSchema = {
-    properties: {
-        title: {
-            type: 'string',
-            maxLength: 255,
-            minLength: 1,
-            title: 'Title'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        }
-    },
-    type: 'object',
-    required: ['title'],
-    title: 'ItemCreate'
-} as const;
-
-export const ItemPublicSchema = {
-    properties: {
-        title: {
-            type: 'string',
-            maxLength: 255,
-            minLength: 1,
-            title: 'Title'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        },
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
-        owner_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Owner Id'
-        },
-        created_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Created At'
-        }
-    },
-    type: 'object',
-    required: ['title', 'id', 'owner_id'],
-    title: 'ItemPublic'
-} as const;
-
-export const ItemUpdateSchema = {
-    properties: {
-        title: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255,
-                    minLength: 1
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Title'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        }
-    },
-    type: 'object',
-    title: 'ItemUpdate'
-} as const;
-
-export const ItemsPublicSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/ItemPublic'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        }
-    },
-    type: 'object',
-    required: ['data', 'count'],
-    title: 'ItemsPublic'
-} as const;
-
 export const MessageSchema = {
     properties: {
         message: {
@@ -205,7 +80,8 @@ export const MessageSchema = {
     },
     type: 'object',
     required: ['message'],
-    title: 'Message'
+    title: 'Message',
+    description: '通用訊息回應'
 } as const;
 
 export const NewPasswordSchema = {
@@ -223,7 +99,80 @@ export const NewPasswordSchema = {
     },
     type: 'object',
     required: ['token', 'new_password'],
-    title: 'NewPassword'
+    title: 'NewPassword',
+    description: '重設密碼請求'
+} as const;
+
+export const NodeSchemaSchema = {
+    properties: {
+        node: {
+            type: 'string',
+            title: 'Node'
+        },
+        status: {
+            type: 'string',
+            title: 'Status'
+        },
+        cpu: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cpu'
+        },
+        maxcpu: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maxcpu'
+        },
+        mem: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Mem'
+        },
+        maxmem: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maxmem'
+        },
+        uptime: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Uptime'
+        }
+    },
+    type: 'object',
+    required: ['node', 'status'],
+    title: 'NodeSchema',
+    description: 'Proxmox node information.'
 } as const;
 
 export const PrivateUserCreateSchema = {
@@ -251,6 +200,38 @@ export const PrivateUserCreateSchema = {
     title: 'PrivateUserCreate'
 } as const;
 
+export const TerminalInfoSchemaSchema = {
+    properties: {
+        vmid: {
+            type: 'integer',
+            title: 'Vmid'
+        },
+        ws_url: {
+            type: 'string',
+            title: 'Ws Url'
+        },
+        ticket: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ticket'
+        },
+        message: {
+            type: 'string',
+            title: 'Message'
+        }
+    },
+    type: 'object',
+    required: ['vmid', 'ws_url', 'message'],
+    title: 'TerminalInfoSchema',
+    description: 'Terminal console connection information for LXC containers.'
+} as const;
+
 export const TokenSchema = {
     properties: {
         access_token: {
@@ -265,7 +246,8 @@ export const TokenSchema = {
     },
     type: 'object',
     required: ['access_token'],
-    title: 'Token'
+    title: 'Token',
+    description: 'JWT 存取權杖回應'
 } as const;
 
 export const UpdatePasswordSchema = {
@@ -285,7 +267,8 @@ export const UpdatePasswordSchema = {
     },
     type: 'object',
     required: ['current_password', 'new_password'],
-    title: 'UpdatePassword'
+    title: 'UpdatePassword',
+    description: '更新密碼請求'
 } as const;
 
 export const UserCreateSchema = {
@@ -327,7 +310,8 @@ export const UserCreateSchema = {
     },
     type: 'object',
     required: ['email', 'password'],
-    title: 'UserCreate'
+    title: 'UserCreate',
+    description: '建立使用者時接收的資料'
 } as const;
 
 export const UserPublicSchema = {
@@ -380,7 +364,8 @@ export const UserPublicSchema = {
     },
     type: 'object',
     required: ['email', 'id'],
-    title: 'UserPublic'
+    title: 'UserPublic',
+    description: 'API 回傳的使用者資料'
 } as const;
 
 export const UserRegisterSchema = {
@@ -412,7 +397,8 @@ export const UserRegisterSchema = {
     },
     type: 'object',
     required: ['email', 'password'],
-    title: 'UserRegister'
+    title: 'UserRegister',
+    description: '使用者自行註冊時使用的資料'
 } as const;
 
 export const UserUpdateSchema = {
@@ -467,7 +453,8 @@ export const UserUpdateSchema = {
         }
     },
     type: 'object',
-    title: 'UserUpdate'
+    title: 'UserUpdate',
+    description: '更新使用者時接收的資料'
 } as const;
 
 export const UserUpdateMeSchema = {
@@ -499,7 +486,8 @@ export const UserUpdateMeSchema = {
         }
     },
     type: 'object',
-    title: 'UserUpdateMe'
+    title: 'UserUpdateMe',
+    description: '使用者更新自己資料時使用'
 } as const;
 
 export const UsersPublicSchema = {
@@ -518,7 +506,124 @@ export const UsersPublicSchema = {
     },
     type: 'object',
     required: ['data', 'count'],
-    title: 'UsersPublic'
+    title: 'UsersPublic',
+    description: 'API 回傳的使用者列表'
+} as const;
+
+export const VMSchemaSchema = {
+    properties: {
+        vmid: {
+            type: 'integer',
+            title: 'Vmid'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        status: {
+            type: 'string',
+            title: 'Status'
+        },
+        node: {
+            type: 'string',
+            title: 'Node'
+        },
+        type: {
+            type: 'string',
+            title: 'Type'
+        },
+        cpu: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cpu'
+        },
+        maxcpu: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maxcpu'
+        },
+        mem: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Mem'
+        },
+        maxmem: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maxmem'
+        },
+        uptime: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Uptime'
+        }
+    },
+    type: 'object',
+    required: ['vmid', 'name', 'status', 'node', 'type'],
+    title: 'VMSchema',
+    description: 'Virtual machine information.'
+} as const;
+
+export const VNCInfoSchemaSchema = {
+    properties: {
+        vmid: {
+            type: 'integer',
+            title: 'Vmid'
+        },
+        ws_url: {
+            type: 'string',
+            title: 'Ws Url'
+        },
+        ticket: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ticket'
+        },
+        message: {
+            type: 'string',
+            title: 'Message'
+        }
+    },
+    type: 'object',
+    required: ['vmid', 'ws_url', 'message'],
+    title: 'VNCInfoSchema',
+    description: 'VNC console connection information.'
 } as const;
 
 export const ValidationErrorSchema = {

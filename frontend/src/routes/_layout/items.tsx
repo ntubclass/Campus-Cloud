@@ -1,69 +1,130 @@
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
-import { Search } from "lucide-react"
-import { Suspense } from "react"
-
-import { ItemsService } from "@/client"
+import { Monitor, RefreshCw } from "lucide-react"
+import { Suspense, useMemo, useState } from "react"
+import { MachineService } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
-import AddItem from "@/components/Items/AddItem"
-import { columns } from "@/components/Items/columns"
+import { createColumns } from "@/components/Items/columns"
 import PendingItems from "@/components/Pending/PendingItems"
+import { Button } from "@/components/ui/button"
+import { VNCConsoleDialog } from "@/components/VNC"
+import { TerminalConsoleDialog } from "@/components/Terminal"
 
-function getItemsQueryOptions() {
+function getVMsQueryOptions() {
   return {
-    queryFn: () => ItemsService.readItems({ skip: 0, limit: 100 }),
-    queryKey: ["items"],
+    queryFn: () => MachineService.listVms({}),
+    queryKey: ["vms"],
   }
 }
 
 export const Route = createFileRoute("/_layout/items")({
-  component: Items,
+  component: VirtualMachines,
   head: () => ({
     meta: [
       {
-        title: "Items - FastAPI Cloud",
+        title: "Virtual Machines - Campus Cloud",
       },
     ],
   }),
 })
 
-function ItemsTableContent() {
-  const { data: items } = useSuspenseQuery(getItemsQueryOptions())
+function VMsTableContent({
+  onOpenConsole,
+}: {
+  onOpenConsole: (vmid: number, name: string, type: string) => void
+}) {
+  const { data: vms } = useSuspenseQuery(getVMsQueryOptions())
 
-  if (items.data.length === 0) {
+  const columns = useMemo(() => createColumns(onOpenConsole), [onOpenConsole])
+
+  if (vms.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-12">
         <div className="rounded-full bg-muted p-4 mb-4">
-          <Search className="h-8 w-8 text-muted-foreground" />
+          <Monitor className="h-8 w-8 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-semibold">You don't have any items yet</h3>
-        <p className="text-muted-foreground">Add a new item to get started</p>
+        <h3 className="text-lg font-semibold">No virtual machines found</h3>
+        <p className="text-muted-foreground">
+          Virtual machines will appear here once they are created in Proxmox
+        </p>
       </div>
     )
   }
 
-  return <DataTable columns={columns} data={items.data} />
+  return <DataTable columns={columns} data={vms} />
 }
 
-function ItemsTable() {
+function VMsTable({
+  onOpenConsole,
+}: {
+  onOpenConsole: (vmid: number, name: string, type: string) => void
+}) {
   return (
     <Suspense fallback={<PendingItems />}>
-      <ItemsTableContent />
+      <VMsTableContent onOpenConsole={onOpenConsole} />
     </Suspense>
   )
 }
 
-function Items() {
+function RefreshButton() {
+  const queryClient = useQueryClient()
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["vms"] })
+  }
+
+  return (
+    <Button variant="outline" onClick={handleRefresh}>
+      <RefreshCw className="mr-2 h-4 w-4" />
+      Refresh
+    </Button>
+  )
+}
+
+function VirtualMachines() {
+  const [vncConsoleOpen, setVncConsoleOpen] = useState(false)
+  const [terminalConsoleOpen, setTerminalConsoleOpen] = useState(false)
+  const [selectedVM, setSelectedVM] = useState<{
+    vmid: number
+    name: string
+    type: string
+  } | null>(null)
+
+  const handleOpenConsole = (vmid: number, name: string, type: string) => {
+    setSelectedVM({ vmid, name, type })
+    if (type === "lxc") {
+      setTerminalConsoleOpen(true)
+    } else {
+      setVncConsoleOpen(true)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Items</h1>
-          <p className="text-muted-foreground">Create and manage your items</p>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Virtual Machines & Containers
+          </h1>
+          <p className="text-muted-foreground">
+            View and manage your virtual machines and LXC containers from Proxmox
+          </p>
         </div>
-        <AddItem />
+        <RefreshButton />
       </div>
-      <ItemsTable />
+      <VMsTable onOpenConsole={handleOpenConsole} />
+      <VNCConsoleDialog
+        vmid={selectedVM?.type === "qemu" ? selectedVM.vmid : null}
+        vmName={selectedVM?.name}
+        open={vncConsoleOpen}
+        onOpenChange={setVncConsoleOpen}
+      />
+      <TerminalConsoleDialog
+        vmid={selectedVM?.type === "lxc" ? selectedVM.vmid : null}
+        vmName={selectedVM?.name}
+        open={terminalConsoleOpen}
+        onOpenChange={setTerminalConsoleOpen}
+      />
     </div>
   )
 }

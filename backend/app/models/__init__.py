@@ -12,13 +12,11 @@ Models 模組
 from sqlmodel import SQLModel
 
 from .base import get_datetime_utc
-from .item import (
-    Item,
-    ItemBase,
-    ItemCreate,
-    ItemPublic,
-    ItemsPublic,
-    ItemUpdate,
+from .machine import (
+    NodeSchema,
+    VMSchema,
+    VNCInfoSchema,
+    TerminalInfoSchema,
 )
 from .token import (
     Message,
@@ -52,13 +50,11 @@ __all__ = [
     "User",
     "UserPublic",
     "UsersPublic",
-    # Item models
-    "ItemBase",
-    "ItemCreate",
-    "ItemUpdate",
-    "Item",
-    "ItemPublic",
-    "ItemsPublic",
+    # Machine models
+    "NodeSchema",
+    "VMSchema",
+    "VNCInfoSchema",
+    "TerminalInfoSchema",
     # Token & common models
     "Message",
     "Token",
