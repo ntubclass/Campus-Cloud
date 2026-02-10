@@ -7,7 +7,6 @@ import httpx
 import websockets
 from fastapi import WebSocket, WebSocketDisconnect
 
-from app.api.deps import VmInfoDep
 from app.core.config import settings
 from app.core.proxmox import get_proxmox_api
 

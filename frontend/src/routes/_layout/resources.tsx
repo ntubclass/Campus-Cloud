@@ -4,8 +4,9 @@ import { Monitor, RefreshCw } from "lucide-react"
 import { Suspense, useMemo, useState } from "react"
 import { ResourcesService } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
-import { createColumns } from "@/components/Items/columns"
 import PendingItems from "@/components/Pending/PendingItems"
+import CreateContainer from "@/components/Resources/CreateResources"
+import { createColumns } from "@/components/Resources/columns"
 import { TerminalConsoleDialog } from "@/components/Terminal"
 import { Button } from "@/components/ui/button"
 import { VNCConsoleDialog } from "@/components/VNC"
@@ -111,7 +112,10 @@ function VirtualMachines() {
             Proxmox
           </p>
         </div>
-        <RefreshButton />
+        <div className="flex gap-2">
+          <CreateContainer />
+          <RefreshButton />
+        </div>
       </div>
       <VMsTable onOpenConsole={handleOpenConsole} />
       <VNCConsoleDialog

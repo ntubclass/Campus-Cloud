@@ -14,6 +14,33 @@ export type HTTPValidationError = {
 };
 
 /**
+ * Response after creating LXC container.
+ */
+export type LXCCreateResponse = {
+    vmid: number;
+    upid: string;
+    message: string;
+};
+
+/**
+ * Schema for creating a new LXC container.
+ */
+export type LXCCreateSchema = {
+    hostname: string;
+    ostemplate: string;
+    cores?: number;
+    memory?: number;
+    rootfs_size?: number;
+    password: string;
+    storage?: string;
+    environment_type: string;
+    os_info?: (string | null);
+    expiry_date?: (string | null);
+    start?: boolean;
+    unprivileged?: boolean;
+};
+
+/**
  * 通用訊息回應
  */
 export type Message = {
@@ -46,6 +73,35 @@ export type PrivateUserCreate = {
     password: string;
     full_name: string;
     is_verified?: boolean;
+};
+
+/**
+ * 公開的資源資訊，合併Proxmox資料和資料庫額外資訊.
+ */
+export type ResourcePublic = {
+    vmid: number;
+    name: string;
+    status: string;
+    node: string;
+    type: string;
+    environment_type?: (string | null);
+    os_info?: (string | null);
+    expiry_date?: (string | null);
+    ip_address?: (string | null);
+    cpu?: (number | null);
+    maxcpu?: (number | null);
+    mem?: (number | null);
+    maxmem?: (number | null);
+    uptime?: (number | null);
+};
+
+/**
+ * OS template information.
+ */
+export type TemplateSchema = {
+    volid: string;
+    format: string;
+    size: number;
 };
 
 /**
@@ -140,6 +196,33 @@ export type ValidationError = {
 };
 
 /**
+ * Response after creating VM.
+ */
+export type VMCreateResponse = {
+    vmid: number;
+    upid: string;
+    message: string;
+};
+
+/**
+ * Schema for creating a new VM from cloud-init template.
+ */
+export type VMCreateSchema = {
+    hostname: string;
+    template_id: number;
+    username: string;
+    password: string;
+    cores?: number;
+    memory?: number;
+    disk_size?: number;
+    storage?: string;
+    environment_type: string;
+    os_info?: (string | null);
+    expiry_date?: (string | null);
+    start?: boolean;
+};
+
+/**
  * Virtual machine information.
  */
 export type VMSchema = {
@@ -160,6 +243,15 @@ export type VMSchema = {
     template?: (number | null);
     memhost?: (number | null);
     maxdisk?: (number | null);
+};
+
+/**
+ * VM template information.
+ */
+export type VMTemplateSchema = {
+    vmid: number;
+    name: string;
+    node: string;
 };
 
 /**
@@ -204,6 +296,14 @@ export type LxcGetLxcTerminalData = {
 
 export type LxcGetLxcTerminalResponse = (TerminalInfoSchema);
 
+export type LxcGetTemplatesResponse = (Array<TemplateSchema>);
+
+export type LxcCreateLxcData = {
+    requestBody: LXCCreateSchema;
+};
+
+export type LxcCreateLxcResponse = (LXCCreateResponse);
+
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;
 };
@@ -216,7 +316,7 @@ export type ResourcesListResourcesData = {
     node?: (string | null);
 };
 
-export type ResourcesListResourcesResponse = (Array<VMSchema>);
+export type ResourcesListResourcesResponse = (Array<ResourcePublic>);
 
 export type ResourcesGetResourceData = {
     vmid: number;
@@ -321,3 +421,11 @@ export type VmGetVmConsoleData = {
 };
 
 export type VmGetVmConsoleResponse = (VNCInfoSchema);
+
+export type VmCreateVmData = {
+    requestBody: VMCreateSchema;
+};
+
+export type VmCreateVmResponse = (VMCreateResponse);
+
+export type VmGetVmTemplatesResponse = (Array<VMTemplateSchema>);

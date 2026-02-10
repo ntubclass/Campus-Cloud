@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, LxcGetLxcTerminalData, LxcGetLxcTerminalResponse, PrivateCreateUserData, PrivateCreateUserResponse, ResourcesListNodesResponse, ResourcesListResourcesData, ResourcesListResourcesResponse, ResourcesGetResourceData, ResourcesGetResourceResponse, ResourcesStartResourceData, ResourcesStartResourceResponse, ResourcesStopResourceData, ResourcesStopResourceResponse, ResourcesRebootResourceData, ResourcesRebootResourceResponse, ResourcesShutdownResourceData, ResourcesShutdownResourceResponse, ResourcesResetResourceData, ResourcesResetResourceResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, VmGetVmConsoleData, VmGetVmConsoleResponse } from './types.gen';
+import type { LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, LxcGetLxcTerminalData, LxcGetLxcTerminalResponse, LxcGetTemplatesResponse, LxcCreateLxcData, LxcCreateLxcResponse, PrivateCreateUserData, PrivateCreateUserResponse, ResourcesListNodesResponse, ResourcesListResourcesData, ResourcesListResourcesResponse, ResourcesGetResourceData, ResourcesGetResourceResponse, ResourcesStartResourceData, ResourcesStartResourceResponse, ResourcesStopResourceData, ResourcesStopResourceResponse, ResourcesRebootResourceData, ResourcesRebootResourceResponse, ResourcesShutdownResourceData, ResourcesShutdownResourceResponse, ResourcesResetResourceData, ResourcesResetResourceResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, VmGetVmConsoleData, VmGetVmConsoleResponse, VmCreateVmData, VmCreateVmResponse, VmGetVmTemplatesResponse } from './types.gen';
 
 export class LoginService {
     /**
@@ -122,6 +122,39 @@ export class LxcService {
             }
         });
     }
+    
+    /**
+     * Get Templates
+     * Get available OS templates for LXC containers.
+     * @returns TemplateSchema Successful Response
+     * @throws ApiError
+     */
+    public static getTemplates(): CancelablePromise<LxcGetTemplatesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/lxc/templates'
+        });
+    }
+    
+    /**
+     * Create Lxc
+     * Create a new LXC container.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns LXCCreateResponse Successful Response
+     * @throws ApiError
+     */
+    public static createLxc(data: LxcCreateLxcData): CancelablePromise<LxcCreateLxcResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/lxc/create',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
 }
 
 export class PrivateService {
@@ -163,7 +196,7 @@ export class ResourcesService {
      * List Resources
      * @param data The data for the request.
      * @param data.node
-     * @returns VMSchema Successful Response
+     * @returns ResourcePublic Successful Response
      * @throws ApiError
      */
     public static listResources(data: ResourcesListResourcesData = {}): CancelablePromise<ResourcesListResourcesResponse> {
@@ -550,6 +583,39 @@ export class VmService {
             errors: {
                 422: 'Validation Error'
             }
+        });
+    }
+    
+    /**
+     * Create Vm
+     * Create a new VM from a cloud-init template.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns VMCreateResponse Successful Response
+     * @throws ApiError
+     */
+    public static createVm(data: VmCreateVmData): CancelablePromise<VmCreateVmResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/vm/create',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Vm Templates
+     * Get available VM templates (VMs marked as templates).
+     * @returns VMTemplateSchema Successful Response
+     * @throws ApiError
+     */
+    public static getVmTemplates(): CancelablePromise<VmGetVmTemplatesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/vm/templates'
         });
     }
 }

@@ -13,10 +13,19 @@ from sqlmodel import SQLModel
 
 from .base import get_datetime_utc
 from .machine import (
+    LXCCreateResponse,
+    LXCCreateSchema,
+    NextVMIDSchema,
     NodeSchema,
-    VMSchema,
-    VNCInfoSchema,
+    Resource,
+    ResourcePublic,
+    TemplateSchema,
     TerminalInfoSchema,
+    VMCreateResponse,
+    VMCreateSchema,
+    VMSchema,
+    VMTemplateSchema,
+    VNCInfoSchema,
 )
 from .token import (
     Message,
@@ -55,6 +64,15 @@ __all__ = [
     "VMSchema",
     "VNCInfoSchema",
     "TerminalInfoSchema",
+    "TemplateSchema",
+    "VMTemplateSchema",
+    "NextVMIDSchema",
+    "LXCCreateSchema",
+    "LXCCreateResponse",
+    "Resource",
+    "ResourcePublic",
+    "VMCreateSchema",
+    "VMCreateResponse",
     # Token & common models
     "Message",
     "Token",

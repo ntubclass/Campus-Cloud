@@ -71,6 +71,105 @@ export const HTTPValidationErrorSchema = {
     title: 'HTTPValidationError'
 } as const;
 
+export const LXCCreateResponseSchema = {
+    properties: {
+        vmid: {
+            type: 'integer',
+            title: 'Vmid'
+        },
+        upid: {
+            type: 'string',
+            title: 'Upid'
+        },
+        message: {
+            type: 'string',
+            title: 'Message'
+        }
+    },
+    type: 'object',
+    required: ['vmid', 'upid', 'message'],
+    title: 'LXCCreateResponse',
+    description: 'Response after creating LXC container.'
+} as const;
+
+export const LXCCreateSchemaSchema = {
+    properties: {
+        hostname: {
+            type: 'string',
+            title: 'Hostname'
+        },
+        ostemplate: {
+            type: 'string',
+            title: 'Ostemplate'
+        },
+        cores: {
+            type: 'integer',
+            title: 'Cores',
+            default: 1
+        },
+        memory: {
+            type: 'integer',
+            title: 'Memory',
+            default: 512
+        },
+        rootfs_size: {
+            type: 'integer',
+            title: 'Rootfs Size',
+            default: 8
+        },
+        password: {
+            type: 'string',
+            title: 'Password'
+        },
+        storage: {
+            type: 'string',
+            title: 'Storage',
+            default: 'local-lvm'
+        },
+        environment_type: {
+            type: 'string',
+            title: 'Environment Type'
+        },
+        os_info: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Os Info'
+        },
+        expiry_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expiry Date'
+        },
+        start: {
+            type: 'boolean',
+            title: 'Start',
+            default: true
+        },
+        unprivileged: {
+            type: 'boolean',
+            title: 'Unprivileged',
+            default: true
+        }
+    },
+    type: 'object',
+    required: ['hostname', 'ostemplate', 'password', 'environment_type'],
+    title: 'LXCCreateSchema',
+    description: 'Schema for creating a new LXC container.'
+} as const;
+
 export const MessageSchema = {
     properties: {
         message: {
@@ -198,6 +297,156 @@ export const PrivateUserCreateSchema = {
     type: 'object',
     required: ['email', 'password', 'full_name'],
     title: 'PrivateUserCreate'
+} as const;
+
+export const ResourcePublicSchema = {
+    properties: {
+        vmid: {
+            type: 'integer',
+            title: 'Vmid'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        status: {
+            type: 'string',
+            title: 'Status'
+        },
+        node: {
+            type: 'string',
+            title: 'Node'
+        },
+        type: {
+            type: 'string',
+            title: 'Type'
+        },
+        environment_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Environment Type'
+        },
+        os_info: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Os Info'
+        },
+        expiry_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expiry Date'
+        },
+        ip_address: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ip Address'
+        },
+        cpu: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cpu'
+        },
+        maxcpu: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maxcpu'
+        },
+        mem: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Mem'
+        },
+        maxmem: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Maxmem'
+        },
+        uptime: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Uptime'
+        }
+    },
+    type: 'object',
+    required: ['vmid', 'name', 'status', 'node', 'type'],
+    title: 'ResourcePublic',
+    description: '公開的資源資訊，合併Proxmox資料和資料庫額外資訊.'
+} as const;
+
+export const TemplateSchemaSchema = {
+    properties: {
+        volid: {
+            type: 'string',
+            title: 'Volid'
+        },
+        format: {
+            type: 'string',
+            title: 'Format'
+        },
+        size: {
+            type: 'integer',
+            title: 'Size'
+        }
+    },
+    type: 'object',
+    required: ['volid', 'format', 'size'],
+    title: 'TemplateSchema',
+    description: 'OS template information.'
 } as const;
 
 export const TerminalInfoSchemaSchema = {
@@ -510,6 +759,104 @@ export const UsersPublicSchema = {
     description: 'API 回傳的使用者列表'
 } as const;
 
+export const VMCreateResponseSchema = {
+    properties: {
+        vmid: {
+            type: 'integer',
+            title: 'Vmid'
+        },
+        upid: {
+            type: 'string',
+            title: 'Upid'
+        },
+        message: {
+            type: 'string',
+            title: 'Message'
+        }
+    },
+    type: 'object',
+    required: ['vmid', 'upid', 'message'],
+    title: 'VMCreateResponse',
+    description: 'Response after creating VM.'
+} as const;
+
+export const VMCreateSchemaSchema = {
+    properties: {
+        hostname: {
+            type: 'string',
+            title: 'Hostname'
+        },
+        template_id: {
+            type: 'integer',
+            title: 'Template Id'
+        },
+        username: {
+            type: 'string',
+            title: 'Username'
+        },
+        password: {
+            type: 'string',
+            title: 'Password'
+        },
+        cores: {
+            type: 'integer',
+            title: 'Cores',
+            default: 2
+        },
+        memory: {
+            type: 'integer',
+            title: 'Memory',
+            default: 2048
+        },
+        disk_size: {
+            type: 'integer',
+            title: 'Disk Size',
+            default: 20
+        },
+        storage: {
+            type: 'string',
+            title: 'Storage',
+            default: 'local-lvm'
+        },
+        environment_type: {
+            type: 'string',
+            title: 'Environment Type'
+        },
+        os_info: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Os Info'
+        },
+        expiry_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Expiry Date'
+        },
+        start: {
+            type: 'boolean',
+            title: 'Start',
+            default: true
+        }
+    },
+    type: 'object',
+    required: ['hostname', 'template_id', 'username', 'password', 'environment_type'],
+    title: 'VMCreateSchema',
+    description: 'Schema for creating a new VM from cloud-init template.'
+} as const;
+
 export const VMSchemaSchema = {
     properties: {
         vmid: {
@@ -669,6 +1016,27 @@ export const VMSchemaSchema = {
     required: ['vmid', 'name', 'status', 'node', 'type'],
     title: 'VMSchema',
     description: 'Virtual machine information.'
+} as const;
+
+export const VMTemplateSchemaSchema = {
+    properties: {
+        vmid: {
+            type: 'integer',
+            title: 'Vmid'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        node: {
+            type: 'string',
+            title: 'Node'
+        }
+    },
+    type: 'object',
+    required: ['vmid', 'name', 'node'],
+    title: 'VMTemplateSchema',
+    description: 'VM template information.'
 } as const;
 
 export const VNCInfoSchemaSchema = {

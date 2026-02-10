@@ -1,15 +1,17 @@
 """使用者相關模型"""
 
-from __future__ import annotations
-
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from pydantic import EmailStr
 from sqlalchemy import DateTime
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
 from .base import get_datetime_utc
+
+if TYPE_CHECKING:
+    from .machine import Resource
 
 
 # Shared properties
@@ -69,6 +71,9 @@ class User(UserBase, table=True):
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),
     )
+
+    # Relationships
+    resources: list["Resource"] = Relationship(back_populates="user")
 
 
 # Properties to return via API, id is always required
