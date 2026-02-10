@@ -324,6 +324,20 @@ export type ResourcesGetResourceData = {
 
 export type ResourcesGetResourceResponse = (VMSchema);
 
+export type ResourcesDeleteResourceData = {
+    force?: boolean;
+    purge?: boolean;
+    vmid: number;
+};
+
+export type ResourcesDeleteResourceResponse = (unknown);
+
+export type ResourcesGetResourceConfigData = {
+    vmid: number;
+};
+
+export type ResourcesGetResourceConfigResponse = (unknown);
+
 export type ResourcesStartResourceData = {
     vmid: number;
 };

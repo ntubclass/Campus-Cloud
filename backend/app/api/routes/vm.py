@@ -1,23 +1,22 @@
 import logging
-import time
 
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import CurrentUser, SessionDep, VmInfoDep
 from app.core.config import settings
-from app.core.proxmox import basic_blocking_task_status,get_proxmox_api
+from app.core.proxmox import basic_blocking_task_status, get_proxmox_api
 from app.crud import resource as resource_crud
 from app.models import VMCreateResponse, VMCreateSchema, VMTemplateSchema, VNCInfoSchema
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/vm", tags=["vm"])
-proxmox = get_proxmox_api()
 
 
 @router.get("/{vmid}/console", response_model=VNCInfoSchema)
 def get_vm_console(vmid: int, vm_info: VmInfoDep):
     try:
+        proxmox = get_proxmox_api()
         if vm_info["type"] != "qemu":
             raise HTTPException(
                 status_code=400, detail=f"Resource {vmid} is not a QEMU VM"
@@ -52,6 +51,7 @@ def create_vm(
 ):
     """Create a new VM from a cloud-init template."""
     try:
+        proxmox = get_proxmox_api()
         # Get next available VMID
         new_vmid = proxmox.cluster.nextid.get()
 
@@ -114,13 +114,6 @@ def create_vm(
             "upid": result,
             "message": f"VM {vm_data.hostname} created successfully with VMID {new_vmid}",
         }
-    except TimeoutError as e:
-        logger.error(f"VM creation timed out: {e}")
-        raise HTTPException(
-            status_code=504,  # Gateway Timeout
-            detail=f"VM creation is taking longer than expected. The task may still be running on Proxmox. "
-                   f"Please check the Proxmox web interface or try again in a few minutes. Error: {str(e)}"
-        )
     except HTTPException:
         raise
     except Exception as e:
@@ -132,6 +125,7 @@ def create_vm(
 def get_vm_templates():
     """Get available VM templates (VMs marked as templates)."""
     try:
+        proxmox = get_proxmox_api()
         all_vms = proxmox.cluster.resources.get(type="vm")
         templates = []
         for vm in all_vms:

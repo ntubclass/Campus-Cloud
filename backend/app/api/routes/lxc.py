@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.api.deps import CurrentUser, LxcInfoDep, SessionDep
 from app.core.config import settings
-from app.core.proxmox import get_proxmox_api
+from app.core.proxmox import basic_blocking_task_status, get_proxmox_api
 from app.crud import resource as resource_crud
 from app.models import (
     LXCCreateResponse,
@@ -16,12 +16,12 @@ from app.models import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/lxc", tags=["lxc"])
-proxmox = get_proxmox_api()
 
 
 @router.get("/{vmid}/terminal", response_model=TerminalInfoSchema)
 def get_lxc_terminal(vmid: int, container_info: LxcInfoDep):
     try:
+        proxmox = get_proxmox_api()
         node = container_info["node"]
         console_data = proxmox.nodes(node).lxc(vmid).termproxy.post()
         terminal_ticket = console_data["ticket"]
@@ -47,6 +47,7 @@ def get_lxc_terminal(vmid: int, container_info: LxcInfoDep):
 def get_templates():
     """Get available OS templates for LXC containers."""
     try:
+        proxmox = get_proxmox_api()
         templates = (
             proxmox.nodes("pve").storage(settings.PROXMOX_ISO_STORAGE).content.get()
         )
@@ -75,6 +76,7 @@ def create_lxc(
 ):
     """Create a new LXC container."""
     try:
+        proxmox = get_proxmox_api()
         # Get next available VMID
         vmid = proxmox.cluster.nextid.get()
 
@@ -96,6 +98,9 @@ def create_lxc(
 
         # Create the container
         result = proxmox.nodes("pve").lxc.create(**config)
+
+        # Wait for clone task to complete
+        basic_blocking_task_status("pve", result)
 
         # Create resource record in database
         resource_crud.create_resource(

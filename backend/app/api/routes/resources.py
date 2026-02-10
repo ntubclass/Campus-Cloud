@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import ResourceInfoDep, SessionDep
-from app.core.proxmox import get_proxmox_api
+from app.core.proxmox import basic_blocking_task_status, get_proxmox_api
 from app.crud import resource as resource_crud
 from app.models import NodeSchema, ResourcePublic, VMSchema
 
@@ -70,7 +70,7 @@ def list_resources(
         resources = proxmox.cluster.resources.get(type="vm")
 
         for resource in resources:
-            if node and resource.get("node") != node:
+            if node and resource.get("node") != node or resource.get("template") == 1:
                 continue
 
             vmid = resource.get("vmid")
@@ -229,4 +229,61 @@ def reset_resource(vmid: int, resource_info: ResourceInfoDep):
         raise
     except Exception as e:
         logger.error(f"Failed to reset resource {vmid}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{vmid}")
+def delete_resource(
+    vmid: int,
+    session: SessionDep,
+    resource_info: ResourceInfoDep,
+    purge: bool = True,
+    force: bool = False,
+):
+    """
+    Delete a resource (VM or LXC container).
+
+    Automatically detects resource type and performs appropriate deletion.
+
+    Args:
+        vmid: Resource ID to delete
+        purge: Remove resource from all related configurations (default: True)
+        force: Force stop the resource if running (default: False)
+    """
+    try:
+        proxmox = get_proxmox_api()
+        node = resource_info["node"]
+        resource_type = resource_info["type"]
+        resource_status = resource_info.get("status", "")
+
+        # Stop resource if it's running
+        if resource_status == "running":
+            logger.info(f"Stopping {resource_type} {vmid} before deletion")
+            if resource_type == "qemu":
+                stop_task = proxmox.nodes(node).qemu(vmid).status.stop.post()
+            else:
+                stop_params = {"force": int(force)} if force else {}
+                stop_task = proxmox.nodes(node).lxc(vmid).status.stop.post(**stop_params)
+            basic_blocking_task_status(node, stop_task)
+
+        # Delete the resource
+        logger.info(f"Deleting {resource_type} {vmid} on node {node}")
+        if resource_type == "qemu":
+            delete_task = proxmox.nodes(node).qemu(vmid).delete(purge=int(purge))
+        else:
+            delete_task = proxmox.nodes(node).lxc(vmid).delete(
+                purge=int(purge), force=int(force)
+            )
+        basic_blocking_task_status(node, delete_task)
+
+        # Delete from database
+        resource_crud.delete_resource(session=session, vmid=vmid)
+
+        logger.info(f"Successfully deleted {resource_type} {vmid}")
+        return {"message": f"Resource {vmid} deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete resource {vmid}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -101,8 +101,7 @@ class Settings(BaseSettings):
     PROXMOX_ISO_STORAGE: str = "local"
     PROXMOX_DATA_STORAGE: str = "local-lvm"
     PROXMOX_API_TIMEOUT: int = 30  # API request timeout in seconds
-    PROXMOX_TASK_TIMEOUT: int = 300  # Max wait time for long tasks (5 minutes)
-    PROXMOX_TASK_CHECK_INTERVAL: int = 2  # Seconds between task status checks
+    PROXMOX_TASK_CHECK_INTERVAL: int = 1  # Seconds between task status checks
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
