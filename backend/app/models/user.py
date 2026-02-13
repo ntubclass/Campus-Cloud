@@ -12,6 +12,7 @@ from .base import get_datetime_utc
 
 if TYPE_CHECKING:
     from .machine import Resource
+    from .vm_request import VMRequest
 
 
 # Shared properties
@@ -74,6 +75,10 @@ class User(UserBase, table=True):
 
     # Relationships
     resources: list["Resource"] = Relationship(back_populates="user")
+    vm_requests: list["VMRequest"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"foreign_keys": "[VMRequest.user_id]"},
+    )
 
 
 # Properties to return via API, id is always required

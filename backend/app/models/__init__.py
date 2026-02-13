@@ -33,6 +33,14 @@ from .token import (
     Token,
     TokenPayload,
 )
+from .vm_request import (
+    VMRequest,
+    VMRequestCreate,
+    VMRequestPublic,
+    VMRequestReview,
+    VMRequestStatus,
+    VMRequestsPublic,
+)
 from .user import (
     UpdatePassword,
     User,
@@ -78,4 +86,11 @@ __all__ = [
     "Token",
     "TokenPayload",
     "NewPassword",
+    # VM Request models
+    "VMRequest",
+    "VMRequestCreate",
+    "VMRequestPublic",
+    "VMRequestReview",
+    "VMRequestStatus",
+    "VMRequestsPublic",
 ]
