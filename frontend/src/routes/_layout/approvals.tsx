@@ -85,7 +85,6 @@ function PendingCountBadge() {
     queryFn: () =>
       VmRequestsService.listAllVmRequests({
         status: "pending" as VMRequestStatus,
-        limit: 100,
       }),
     queryKey: ["vm-requests-admin", "pending-count"],
   })
