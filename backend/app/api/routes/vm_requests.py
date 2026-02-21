@@ -187,32 +187,63 @@ def review_vm_request(
 
     vmid = None
 
-    # If approved, create the VM/LXC automatically
-    if review.status == VMRequestStatus.approved:
-        try:
+    try:
+        # If approved, create the VM/LXC automatically
+        if review.status == VMRequestStatus.approved:
             vmid = _provision_resource(db_request, session)
-        except Exception:
-            logger.exception(
-                "Failed to provision resource for request %s", request_id
-            )
-            raise HTTPException(
-                status_code=500,
-                detail="Approved but failed to create resource",
+
+        updated = vm_request_crud.update_vm_request_status(
+            session=session,
+            db_request=db_request,
+            status=review.status,
+            reviewer_id=current_user.id,
+            review_comment=review.review_comment,
+            vmid=vmid,
+        )
+
+        action = (
+            "approved" if review.status == VMRequestStatus.approved else "rejected"
+        )
+        logger.info(
+            f"Admin {current_user.email} {action} VM request {request_id}"
+        )
+    except Exception:
+        logger.exception(
+            "Failed to process review for VM request %s", request_id
+        )
+
+        # If provisioning failed after an approval attempt, reset the request
+        # back to pending so that admins can retry or investigate.
+        if review.status == VMRequestStatus.approved:
+            error_comment = review.review_comment or ""
+            if error_comment:
+                error_comment += " | "
+            error_comment += (
+                "Automatic provisioning failed; please review and retry."
             )
 
-    updated = vm_request_crud.update_vm_request_status(
-        session=session,
-        db_request=db_request,
-        status=review.status,
-        reviewer_id=current_user.id,
-        review_comment=review.review_comment,
-        vmid=vmid,
-    )
+            try:
+                vm_request_crud.update_vm_request_status(
+                    session=session,
+                    db_request=db_request,
+                    status=VMRequestStatus.pending,
+                    reviewer_id=current_user.id,
+                    review_comment=error_comment,
+                    vmid=None,
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to reset VM request %s back to pending "
+                    "after provisioning error",
+                    request_id,
+                )
 
-    action = "approved" if review.status == VMRequestStatus.approved else "rejected"
-    logger.info(
-        f"Admin {current_user.email} {action} VM request {request_id}"
-    )
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Failed to process review; automatic provisioning may have failed."
+            ),
+        )
 
     # Re-fetch with eager-loaded user relationship
     refreshed = vm_request_crud.get_vm_request_by_id(
