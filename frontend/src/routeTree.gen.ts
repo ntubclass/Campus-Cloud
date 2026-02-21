@@ -17,6 +17,9 @@ import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutResourcesRouteImport } from './routes/_layout/resources'
+import { Route as LayoutMyResourcesRouteImport } from './routes/_layout/my-resources'
+import { Route as LayoutApprovalsRouteImport } from './routes/_layout/approvals'
+import { Route as LayoutApplicationsRouteImport } from './routes/_layout/applications'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 
 const SignupRoute = SignupRouteImport.update({
@@ -58,6 +61,21 @@ const LayoutResourcesRoute = LayoutResourcesRouteImport.update({
   path: '/resources',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutMyResourcesRoute = LayoutMyResourcesRouteImport.update({
+  id: '/my-resources',
+  path: '/my-resources',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutApprovalsRoute = LayoutApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutApplicationsRoute = LayoutApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutAdminRoute = LayoutAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -71,6 +89,9 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
+  '/applications': typeof LayoutApplicationsRoute
+  '/approvals': typeof LayoutApprovalsRoute
+  '/my-resources': typeof LayoutMyResourcesRoute
   '/resources': typeof LayoutResourcesRoute
   '/settings': typeof LayoutSettingsRoute
 }
@@ -80,6 +101,9 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
+  '/applications': typeof LayoutApplicationsRoute
+  '/approvals': typeof LayoutApprovalsRoute
+  '/my-resources': typeof LayoutMyResourcesRoute
   '/resources': typeof LayoutResourcesRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
@@ -92,6 +116,9 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRoute
+  '/_layout/applications': typeof LayoutApplicationsRoute
+  '/_layout/approvals': typeof LayoutApprovalsRoute
+  '/_layout/my-resources': typeof LayoutMyResourcesRoute
   '/_layout/resources': typeof LayoutResourcesRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
@@ -105,6 +132,9 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/applications'
+    | '/approvals'
+    | '/my-resources'
     | '/resources'
     | '/settings'
   fileRoutesByTo: FileRoutesByTo
@@ -114,6 +144,9 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/applications'
+    | '/approvals'
+    | '/my-resources'
     | '/resources'
     | '/settings'
     | '/'
@@ -125,6 +158,9 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_layout/admin'
+    | '/_layout/applications'
+    | '/_layout/approvals'
+    | '/_layout/my-resources'
     | '/_layout/resources'
     | '/_layout/settings'
     | '/_layout/'
@@ -196,6 +232,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutResourcesRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/my-resources': {
+      id: '/_layout/my-resources'
+      path: '/my-resources'
+      fullPath: '/my-resources'
+      preLoaderRoute: typeof LayoutMyResourcesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/approvals': {
+      id: '/_layout/approvals'
+      path: '/approvals'
+      fullPath: '/approvals'
+      preLoaderRoute: typeof LayoutApprovalsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/applications': {
+      id: '/_layout/applications'
+      path: '/applications'
+      fullPath: '/applications'
+      preLoaderRoute: typeof LayoutApplicationsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/admin': {
       id: '/_layout/admin'
       path: '/admin'
@@ -208,6 +265,9 @@ declare module '@tanstack/react-router' {
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
+  LayoutApplicationsRoute: typeof LayoutApplicationsRoute
+  LayoutApprovalsRoute: typeof LayoutApprovalsRoute
+  LayoutMyResourcesRoute: typeof LayoutMyResourcesRoute
   LayoutResourcesRoute: typeof LayoutResourcesRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
@@ -215,6 +275,9 @@ interface LayoutRouteChildren {
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
+  LayoutApplicationsRoute: LayoutApplicationsRoute,
+  LayoutApprovalsRoute: LayoutApprovalsRoute,
+  LayoutMyResourcesRoute: LayoutMyResourcesRoute,
   LayoutResourcesRoute: LayoutResourcesRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,

@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, LxcGetLxcTerminalData, LxcGetLxcTerminalResponse, LxcGetTemplatesResponse, LxcCreateLxcData, LxcCreateLxcResponse, PrivateCreateUserData, PrivateCreateUserResponse, ResourcesListNodesResponse, ResourcesListResourcesData, ResourcesListResourcesResponse, ResourcesGetResourceData, ResourcesGetResourceResponse, ResourcesDeleteResourceData, ResourcesDeleteResourceResponse, ResourcesGetResourceConfigData, ResourcesGetResourceConfigResponse, ResourcesStartResourceData, ResourcesStartResourceResponse, ResourcesStopResourceData, ResourcesStopResourceResponse, ResourcesRebootResourceData, ResourcesRebootResourceResponse, ResourcesShutdownResourceData, ResourcesShutdownResourceResponse, ResourcesResetResourceData, ResourcesResetResourceResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, VmGetVmConsoleData, VmGetVmConsoleResponse, VmCreateVmData, VmCreateVmResponse, VmGetVmTemplatesResponse } from './types.gen';
+import type { LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, LxcGetLxcTerminalData, LxcGetLxcTerminalResponse, LxcGetTemplatesResponse, LxcCreateLxcData, LxcCreateLxcResponse, PrivateCreateUserData, PrivateCreateUserResponse, ResourcesListNodesResponse, ResourcesListResourcesData, ResourcesListResourcesResponse, ResourcesListMyResourcesResponse, ResourcesGetResourceData, ResourcesGetResourceResponse, ResourcesDeleteResourceData, ResourcesDeleteResourceResponse, ResourcesGetResourceConfigData, ResourcesGetResourceConfigResponse, ResourcesStartResourceData, ResourcesStartResourceResponse, ResourcesStopResourceData, ResourcesStopResourceResponse, ResourcesRebootResourceData, ResourcesRebootResourceResponse, ResourcesShutdownResourceData, ResourcesShutdownResourceResponse, ResourcesResetResourceData, ResourcesResetResourceResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse, VmGetVmConsoleData, VmGetVmConsoleResponse, VmCreateVmData, VmCreateVmResponse, VmGetVmTemplatesResponse, VmRequestsCreateData, VmRequestsCreateResponse, VmRequestsListMyData, VmRequestsListMyResponse, VmRequestsListAllData, VmRequestsListAllResponse, VmRequestsGetData, VmRequestsGetResponse, VmRequestsReviewData, VmRequestsReviewResponse } from './types.gen';
 
 export class LoginService {
     /**
@@ -209,6 +209,19 @@ export class ResourcesService {
             errors: {
                 422: 'Validation Error'
             }
+        });
+    }
+
+    /**
+     * List My Resources
+     * List resources owned by the current user (approved VMs/containers).
+     * @returns ResourcePublic Successful Response
+     * @throws ApiError
+     */
+    public static listMyResources(): CancelablePromise<ResourcesListMyResourcesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/resources/my'
         });
     }
     
@@ -670,6 +683,97 @@ export class VmService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/vm/templates'
+        });
+    }
+}
+
+export class VmRequestsService {
+    /**
+     * Create VM Request
+     * Submit a new VM/LXC request (requires reason).
+     */
+    public static createVmRequest(data: VmRequestsCreateData): CancelablePromise<VmRequestsCreateResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/vm-requests/',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * List My VM Requests
+     * List the current user's VM requests.
+     */
+    public static listMyVmRequests(data: VmRequestsListMyData = {}): CancelablePromise<VmRequestsListMyResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/vm-requests/my',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * List All VM Requests (Admin)
+     * List all VM requests.
+     */
+    public static listAllVmRequests(data: VmRequestsListAllData = {}): CancelablePromise<VmRequestsListAllResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/vm-requests/',
+            query: {
+                status: data.status,
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Get VM Request
+     * Get a single VM request.
+     */
+    public static getVmRequest(data: VmRequestsGetData): CancelablePromise<VmRequestsGetResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/vm-requests/{request_id}',
+            path: {
+                request_id: data.requestId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Review VM Request (Admin)
+     * Approve or reject a VM request.
+     */
+    public static reviewVmRequest(data: VmRequestsReviewData): CancelablePromise<VmRequestsReviewResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/vm-requests/{request_id}/review',
+            path: {
+                request_id: data.requestId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
 }

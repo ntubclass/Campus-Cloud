@@ -318,6 +318,8 @@ export type ResourcesListResourcesData = {
 
 export type ResourcesListResourcesResponse = (Array<ResourcePublic>);
 
+export type ResourcesListMyResourcesResponse = (Array<ResourcePublic>);
+
 export type ResourcesGetResourceData = {
     vmid: number;
 };
@@ -443,3 +445,107 @@ export type VmCreateVmData = {
 export type VmCreateVmResponse = (VMCreateResponse);
 
 export type VmGetVmTemplatesResponse = (Array<VMTemplateSchema>);
+
+// ===== VM Request Types =====
+
+export type VMRequestStatus = 'pending' | 'approved' | 'rejected';
+
+/**
+ * 建立虛擬機申請的 Schema.
+ */
+export type VMRequestCreate = {
+    reason: string;
+    resource_type: string;
+    hostname: string;
+    cores?: number;
+    memory?: number;
+    password: string;
+    storage?: string;
+    os_info?: (string | null);
+    expiry_date?: (string | null);
+    ostemplate?: (string | null);
+    rootfs_size?: (number | null);
+    template_id?: (number | null);
+    disk_size?: (number | null);
+    username?: (string | null);
+};
+
+/**
+ * 審核虛擬機申請的 Schema.
+ */
+export type VMRequestReview = {
+    status: VMRequestStatus;
+    review_comment?: (string | null);
+};
+
+/**
+ * 公開的虛擬機申請資訊.
+ */
+export type VMRequestPublic = {
+    id: string;
+    user_id: string;
+    user_email?: (string | null);
+    user_full_name?: (string | null);
+    reason: string;
+    resource_type: string;
+    hostname: string;
+    cores: number;
+    memory: number;
+    storage: string;
+    environment_type: string;
+    os_info?: (string | null);
+    expiry_date?: (string | null);
+    ostemplate?: (string | null);
+    rootfs_size?: (number | null);
+    template_id?: (number | null);
+    disk_size?: (number | null);
+    username?: (string | null);
+    status: VMRequestStatus;
+    reviewer_id?: (string | null);
+    review_comment?: (string | null);
+    reviewed_at?: (string | null);
+    vmid?: (number | null);
+    created_at: string;
+};
+
+/**
+ * 虛擬機申請列表.
+ */
+export type VMRequestsPublic = {
+    data: Array<VMRequestPublic>;
+    count: number;
+};
+
+export type VmRequestsCreateData = {
+    requestBody: VMRequestCreate;
+};
+
+export type VmRequestsCreateResponse = (VMRequestPublic);
+
+export type VmRequestsListMyData = {
+    skip?: number;
+    limit?: number;
+};
+
+export type VmRequestsListMyResponse = (VMRequestsPublic);
+
+export type VmRequestsListAllData = {
+    status?: (VMRequestStatus | null);
+    skip?: number;
+    limit?: number;
+};
+
+export type VmRequestsListAllResponse = (VMRequestsPublic);
+
+export type VmRequestsGetData = {
+    requestId: string;
+};
+
+export type VmRequestsGetResponse = (VMRequestPublic);
+
+export type VmRequestsReviewData = {
+    requestId: string;
+    requestBody: VMRequestReview;
+};
+
+export type VmRequestsReviewResponse = (VMRequestPublic);
