@@ -1,0 +1,449 @@
+// @ts-expect-error
+import rawData from "virtual:templates"
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Check,
+  Copy,
+  Cpu,
+  FileText,
+  Globe,
+  HardDrive,
+  Info,
+  LayoutTemplate,
+  Search,
+  Server,
+  Terminal,
+} from "lucide-react"
+import { useMemo, useState } from "react"
+import { useTranslation } from "react-i18next"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+const allData = rawData as Record<string, any>
+
+const metadataKeys = Object.keys(allData).find((path) =>
+  path.endsWith("metadata.json"),
+)
+const rawMetadata = metadataKeys ? allData[metadataKeys] : { categories: [] }
+
+const templates = Object.entries(allData)
+  .filter(
+    ([path]) =>
+      !path.endsWith("metadata.json") &&
+      !path.endsWith("versions.json") &&
+      !path.endsWith("github-versions.json"),
+  )
+  .map(([_, val]) => val)
+  .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={handleCopy}
+      className="h-8 w-8 shrink-0"
+    >
+      {copied ? (
+        <Check className="h-4 w-4 text-green-500" />
+      ) : (
+        <Copy className="h-4 w-4" />
+      )}
+    </Button>
+  )
+}
+
+function NoteBox({ note }: { note: { text: string; type?: string } }) {
+  let colorClasses =
+    "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400"
+  let Icon = Info
+
+  if (note.type === "warning") {
+    colorClasses =
+      "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"
+    Icon = AlertTriangle
+  } else if (note.type === "alert") {
+    colorClasses =
+      "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400"
+    Icon = AlertTriangle
+  }
+
+  return (
+    <div
+      className={`p-4 rounded-lg border flex items-start gap-3 ${colorClasses}`}
+    >
+      <Icon className="h-5 w-5 mt-0.5 shrink-0" />
+      <div
+        className="text-sm leading-relaxed"
+        dangerouslySetInnerHTML={{
+          __html: note.text
+            .replace(/\\r\\n|\\n/g, "<br />")
+            .replace(
+              /`([^`]+)`/g,
+              '<code class="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded text-xs">$1</code>',
+            ),
+        }}
+      />
+    </div>
+  )
+}
+
+export function FastTemplatesTab() {
+  const { t } = useTranslation("applications")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null)
+
+  const categories = useMemo(() => {
+    return rawMetadata.categories.sort(
+      (a: any, b: any) => a.sort_order - b.sort_order,
+    )
+  }, [])
+
+  const categoriesMap = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const cat of rawMetadata.categories) {
+      map.set(cat.id, cat.name)
+    }
+    return map
+  }, [])
+
+  const filteredTemplates = useMemo(() => {
+    return templates.filter((template) => {
+      const matchesSearch =
+        template.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        template.description?.toLowerCase().includes(searchTerm.toLowerCase())
+
+      const matchesCategory =
+        selectedCategory === "all" ||
+        (template.categories &&
+          template.categories.includes(Number(selectedCategory)))
+
+      return matchesSearch && matchesCategory
+    })
+  }, [searchTerm, selectedCategory])
+
+  if (selectedTemplate) {
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+        <Button
+          variant="ghost"
+          onClick={() => setSelectedTemplate(null)}
+          className="-ml-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" /> {t("templates.backToList")}
+        </Button>
+
+        <div className="flex items-center gap-4">
+          <div className="h-16 w-16 rounded-xl bg-background p-2 border shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+            {selectedTemplate.logo ? (
+              <img
+                src={selectedTemplate.logo}
+                alt={selectedTemplate.name}
+                className="h-full w-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.src =
+                    "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp"
+                }}
+              />
+            ) : (
+              <LayoutTemplate className="h-8 w-8 text-muted-foreground" />
+            )}
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">{selectedTemplate.name}</h2>
+            <div className="text-base flex items-center gap-2 mt-1">
+              <Badge variant="outline">
+                {selectedTemplate.type?.toUpperCase() || "CT"}
+              </Badge>
+              {selectedTemplate.updateable && (
+                <Badge variant="secondary">
+                  {t("templates.supportsUpdate")}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6 lg:px-2">
+          <div>
+            <h4 className="text-sm font-medium mb-2">
+              {t("templates.description")}
+            </h4>
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+              {selectedTemplate.description || t("templates.noDescription")}
+            </p>
+          </div>
+
+          {selectedTemplate.notes && selectedTemplate.notes.length > 0 && (
+            <div className="space-y-3">
+              {selectedTemplate.notes.map((note: any, idx: number) => (
+                <NoteBox key={idx} note={note} />
+              ))}
+            </div>
+          )}
+
+          {selectedTemplate.categories &&
+            selectedTemplate.categories.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-2">
+                  {t("templates.categories")}
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedTemplate.categories.map((catId: number) => (
+                    <Badge variant="secondary" key={catId}>
+                      {categoriesMap.get(catId) || "Unknown"}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          <div className="grid grid-cols-2 gap-4">
+            {selectedTemplate.interface_port && (
+              <div className="rounded-lg border bg-card p-3">
+                <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <Globe className="h-3.5 w-3.5" />{" "}
+                  {t("templates.webInterface")}
+                </div>
+                <div className="text-sm font-medium">
+                  {t("templates.port", {
+                    port: selectedTemplate.interface_port,
+                  })}
+                </div>
+              </div>
+            )}
+            {selectedTemplate.default_credentials?.username && (
+              <div className="rounded-lg border bg-card p-3">
+                <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <Server className="h-3.5 w-3.5" />{" "}
+                  {t("templates.defaultUsername")}
+                </div>
+                <div className="text-sm font-medium">
+                  {selectedTemplate.default_credentials.username}
+                </div>
+              </div>
+            )}
+            {selectedTemplate.default_credentials?.password && (
+              <div className="rounded-lg border bg-card p-3">
+                <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
+                  <Server className="h-3.5 w-3.5" />{" "}
+                  {t("templates.defaultPassword")}
+                </div>
+                <div className="text-sm font-medium">
+                  {selectedTemplate.default_credentials.password}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {selectedTemplate.install_methods?.map((method: any, idx: number) => (
+            <div key={idx} className="space-y-3">
+              <h4 className="text-sm font-medium flex items-center gap-2">
+                <Terminal className="h-4 w-4" />
+                {method.type === "default"
+                  ? t("templates.defaultInstallScript")
+                  : `${method.type} ${t("templates.installScript")}`}
+              </h4>
+
+              <div className="relative group">
+                <div className="text-sm bg-muted rounded-md p-3 pr-12 font-mono whitespace-pre-wrap break-all text-muted-foreground border">
+                  {`bash -c "$(wget -qЛО - https://github.com/community-scripts/ProxmoxVE/raw/main/${method.script})"`}
+                </div>
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <CopyButton
+                    text={`bash -c "$(wget -qLO - https://github.com/community-scripts/ProxmoxVE/raw/main/${method.script})"`}
+                  />
+                </div>
+              </div>
+
+              {method.resources && (
+                <div className="bg-card/50 rounded-lg border p-4 space-y-3 mt-4">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    {t("templates.defaultResources")}
+                  </div>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-y-3">
+                    {method.resources.cpu && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Cpu className="h-4 w-4 text-muted-foreground" />
+                        <span>{method.resources.cpu} vCPU</span>
+                      </div>
+                    )}
+                    {method.resources.ram && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <HardDrive className="h-4 w-4 text-muted-foreground" />
+                        <span>{method.resources.ram} MB RAM</span>
+                      </div>
+                    )}
+                    {method.resources.hdd && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <HardDrive className="h-4 w-4 text-muted-foreground" />
+                        <span>{method.resources.hdd} GB Storage</span>
+                      </div>
+                    )}
+                    {method.resources.os && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Server className="h-4 w-4 text-muted-foreground" />
+                        <span className="capitalize">
+                          {method.resources.os} {method.resources.version}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {(selectedTemplate.website || selectedTemplate.documentation) && (
+            <div className="flex gap-3 pt-4 border-t">
+              {selectedTemplate.website && (
+                <Button variant="outline" size="sm" className="flex-1" asChild>
+                  <a
+                    href={selectedTemplate.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Globe className="mr-2 h-4 w-4" />{" "}
+                    {t("templates.officialWebsite")}
+                  </a>
+                </Button>
+              )}
+              {selectedTemplate.documentation && (
+                <Button variant="outline" size="sm" className="flex-1" asChild>
+                  <a
+                    href={selectedTemplate.documentation}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />{" "}
+                    {t("templates.documentation")}
+                  </a>
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+      <div className="flex flex-row items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder={t("templates.searchPlaceholder")}
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-32 md:w-45 shrink-0">
+            <SelectValue placeholder={t("templates.allCategories")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t("templates.allCategories")}</SelectItem>
+            {categories.map((cat: any) => (
+              <SelectItem key={cat.id} value={cat.id.toString()}>
+                {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredTemplates.map((template) => (
+          <Card
+            key={template.slug}
+            className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50 group flex flex-col h-full bg-card/50 backdrop-blur-sm"
+            onClick={() => setSelectedTemplate(template)}
+          >
+            <CardHeader className="flex flex-row items-center gap-4 pb-2 p-4">
+              <div className="h-10 w-10 rounded-lg bg-background p-1.5 border shadow-sm flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+                {template.logo ? (
+                  <img
+                    src={template.logo}
+                    alt={template.name}
+                    className="h-full w-full object-contain"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.src =
+                        "https://cdn.jsdelivr.net/gh/selfhst/icons@main/webp/proxmox.webp"
+                    }}
+                  />
+                ) : (
+                  <LayoutTemplate className="h-5 w-5 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex flex-col overflow-hidden">
+                <CardTitle className="text-base truncate" title={template.name}>
+                  {template.name}
+                </CardTitle>
+                <CardDescription className="truncate text-xs">
+                  {template.type?.toUpperCase()}
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <p className="line-clamp-2 text-xs text-muted-foreground mb-3 min-h-[32px]">
+                {template.description || t("templates.noDescription")}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {template.categories?.slice(0, 2).map((catId: number) => (
+                  <Badge
+                    variant="secondary"
+                    key={catId}
+                    className="text-[10px] px-1.5 py-0 h-4"
+                  >
+                    {categoriesMap.get(catId) || "Unknown"}
+                  </Badge>
+                ))}
+                {template.categories?.length > 2 && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 h-4"
+                  >
+                    +{template.categories.length - 2}
+                  </Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredTemplates.length === 0 && (
+        <div className="py-12 text-center text-muted-foreground text-sm">
+          {t("templates.noTemplatesFound")}
+        </div>
+      )}
+    </div>
+  )
+}

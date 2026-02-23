@@ -1,0 +1,26 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "myResources": "My Resources",
+    "applications": "Applications",
+    "resources": "Resources",
+    "approvals": "Approvals",
+    "admin": "Admin",
+    "settings": "Settings",
+    "language": "Language",
+    "appearance": "Appearance"
+  },
+  "pageTitle": {
+    "dashboard": "Dashboard - Campus Cloud",
+    "myResources": "My Resources - Campus Cloud",
+    "applications": "Applications - Campus Cloud",
+    "resources": "Virtual Machines - Campus Cloud",
+    "approvals": "Approvals - Campus Cloud",
+    "admin": "Admin - Campus Cloud",
+    "settings": "Settings - Campus Cloud"
+  },
+  "dashboard": {
+    "welcome": "Hi, {{name}} 👋",
+    "description": "Welcome back, nice to see you again!!!"
+  }
+}

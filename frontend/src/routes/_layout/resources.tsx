@@ -2,6 +2,7 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { Monitor, RefreshCw } from "lucide-react"
 import { Suspense, useMemo, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { ResourcesService } from "@/client"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingItems from "@/components/Pending/PendingItems"
@@ -34,9 +35,10 @@ function VMsTableContent({
 }: {
   onOpenConsole: (vmid: number, name: string, type: string) => void
 }) {
+  const { t } = useTranslation(["resources"])
   const { data: resources } = useSuspenseQuery(getVMsQueryOptions())
 
-  const columns = useMemo(() => createColumns(onOpenConsole), [onOpenConsole])
+  const columns = useMemo(() => createColumns(t, onOpenConsole), [t, onOpenConsole])
 
   if (resources.length === 0) {
     return (
@@ -44,9 +46,9 @@ function VMsTableContent({
         <div className="rounded-full bg-muted p-4 mb-4">
           <Monitor className="h-8 w-8 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-semibold">No virtual machines found</h3>
+        <h3 className="text-lg font-semibold">{t("resources:page.noVMs")}</h3>
         <p className="text-muted-foreground">
-          Virtual machines will appear here once they are created in Proxmox
+          {t("resources:page.noVMsDescription")}
         </p>
       </div>
     )
@@ -68,6 +70,7 @@ function VMsTable({
 }
 
 function RefreshButton() {
+  const { t } = useTranslation(["resources"])
   const queryClient = useQueryClient()
 
   const handleRefresh = () => {
@@ -77,12 +80,13 @@ function RefreshButton() {
   return (
     <Button variant="outline" onClick={handleRefresh}>
       <RefreshCw className="mr-2 h-4 w-4" />
-      Refresh
+      {t("resources:page.refresh")}
     </Button>
   )
 }
 
 function VirtualMachines() {
+  const { t } = useTranslation(["resources"])
   const [vncConsoleOpen, setVncConsoleOpen] = useState(false)
   const [terminalConsoleOpen, setTerminalConsoleOpen] = useState(false)
   const [selectedVM, setSelectedVM] = useState<{
@@ -105,11 +109,10 @@ function VirtualMachines() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Virtual Machines & Containers
+            {t("resources:page.title")}
           </h1>
           <p className="text-muted-foreground">
-            View and manage your virtual machines and LXC containers from
-            Proxmox
+            {t("resources:page.description")}
           </p>
         </div>
         <div className="flex gap-2">

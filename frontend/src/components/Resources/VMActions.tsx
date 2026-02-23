@@ -11,6 +11,7 @@ import {
   XCircle,
 } from "lucide-react"
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { ResourcesService } from "@/client"
 import {
   AlertDialog,
@@ -48,6 +49,7 @@ export function VMActions({
   status,
   onOpenConsole,
 }: VMActionsProps) {
+  const { t } = useTranslation(["resources", "messages", "common"])
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -58,68 +60,67 @@ export function VMActions({
   const startMutation = useMutation({
     mutationFn: () => ResourcesService.startResource({ vmid }),
     onSuccess: () => {
-      showSuccessToast(`${name} is starting...`)
-      // Invalidate and refetch
+      showSuccessToast(t("messages:vm.starting", { name }))
       queryClient.invalidateQueries({ queryKey: ["resources"] })
     },
     onError: (error: Error) => {
-      showErrorToast(`Failed to start ${name}: ${error.message}`)
+      showErrorToast(t("messages:vm.startFailed", { name, error: error.message }))
     },
   })
 
   const stopMutation = useMutation({
     mutationFn: () => ResourcesService.stopResource({ vmid }),
     onSuccess: () => {
-      showSuccessToast(`${name} is stopping...`)
+      showSuccessToast(t("messages:vm.stopping", { name }))
       queryClient.invalidateQueries({ queryKey: ["resources"] })
     },
     onError: (error: Error) => {
-      showErrorToast(`Failed to stop ${name}: ${error.message}`)
+      showErrorToast(t("messages:vm.stopFailed", { name, error: error.message }))
     },
   })
 
   const rebootMutation = useMutation({
     mutationFn: () => ResourcesService.rebootResource({ vmid }),
     onSuccess: () => {
-      showSuccessToast(`${name} is rebooting...`)
+      showSuccessToast(t("messages:vm.rebooting", { name }))
       queryClient.invalidateQueries({ queryKey: ["resources"] })
     },
     onError: (error: Error) => {
-      showErrorToast(`Failed to reboot ${name}: ${error.message}`)
+      showErrorToast(t("messages:vm.rebootFailed", { name, error: error.message }))
     },
   })
 
   const shutdownMutation = useMutation({
     mutationFn: () => ResourcesService.shutdownResource({ vmid }),
     onSuccess: () => {
-      showSuccessToast(`${name} is shutting down...`)
+      showSuccessToast(t("messages:vm.shuttingDown", { name }))
       queryClient.invalidateQueries({ queryKey: ["resources"] })
     },
     onError: (error: Error) => {
-      showErrorToast(`Failed to shutdown ${name}: ${error.message}`)
+      showErrorToast(t("messages:vm.shutdownFailed", { name, error: error.message }))
     },
   })
 
   const resetMutation = useMutation({
     mutationFn: () => ResourcesService.resetResource({ vmid }),
     onSuccess: () => {
-      showSuccessToast(`${name} is resetting...`)
+      showSuccessToast(t("messages:vm.resetting", { name }))
       queryClient.invalidateQueries({ queryKey: ["resources"] })
     },
     onError: (error: Error) => {
-      showErrorToast(`Failed to reset ${name}: ${error.message}`)
+      showErrorToast(t("messages:vm.resetFailed", { name, error: error.message }))
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: () => ResourcesService.deleteResource({ vmid }),
     onSuccess: () => {
-      showSuccessToast(`${name} deleted successfully`)
+      showSuccessToast(t("messages:vm.deleted", { name }))
       queryClient.invalidateQueries({ queryKey: ["resources"] })
       setDeleteDialogOpen(false)
     },
     onError: (error: Error) => {
-      showErrorToast(`Failed to delete ${name}: ${error.message}`)
+      showErrorToast(t("messages:vm.deleteFailed", { name, error: error.message }))
       setDeleteDialogOpen(false)
     },
   })
@@ -145,18 +146,18 @@ export function VMActions({
         ) : (
           <MonitorPlay className="h-4 w-4 mr-1" />
         )}
-        {isLXC ? "Terminal" : "Console"}
+        {isLXC ? t("resources:actions.terminal") : t("resources:actions.console")}
       </Button>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" disabled={isLoading}>
             <MoreVertical className="h-4 w-4" />
-            <span className="sr-only">Open menu</span>
+            <span className="sr-only">{t("resources:actions.openMenu")}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuLabel>Power Control</DropdownMenuLabel>
+          <DropdownMenuLabel>{t("resources:actions.powerControl")}</DropdownMenuLabel>
           <DropdownMenuSeparator />
 
           <DropdownMenuItem
@@ -165,7 +166,7 @@ export function VMActions({
             className="cursor-pointer"
           >
             <Play className="mr-2 h-4 w-4 text-green-600" />
-            <span>Start</span>
+            <span>{t("resources:actions.start")}</span>
           </DropdownMenuItem>
 
           <DropdownMenuItem
@@ -174,7 +175,7 @@ export function VMActions({
             className="cursor-pointer"
           >
             <Power className="mr-2 h-4 w-4 text-blue-600" />
-            <span>Shutdown</span>
+            <span>{t("resources:actions.shutdown")}</span>
           </DropdownMenuItem>
 
           <DropdownMenuItem
@@ -183,7 +184,7 @@ export function VMActions({
             className="cursor-pointer"
           >
             <RotateCcw className="mr-2 h-4 w-4 text-orange-600" />
-            <span>Reboot</span>
+            <span>{t("resources:actions.reboot")}</span>
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
@@ -194,7 +195,7 @@ export function VMActions({
             className="cursor-pointer"
           >
             <Square className="mr-2 h-4 w-4 text-amber-600" />
-            <span>Stop (Force)</span>
+            <span>{t("resources:actions.stopForce")}</span>
           </DropdownMenuItem>
 
           <DropdownMenuItem
@@ -203,7 +204,7 @@ export function VMActions({
             className="cursor-pointer"
           >
             <XCircle className="mr-2 h-4 w-4 text-red-600" />
-            <span>Reset (Force)</span>
+            <span>{t("resources:actions.resetForce")}</span>
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
@@ -214,7 +215,7 @@ export function VMActions({
             className="cursor-pointer text-red-600 focus:text-red-600"
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            <span>Delete</span>
+            <span>{t("resources:actions.delete")}</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -222,28 +223,28 @@ export function VMActions({
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>{t("resources:actions.deleteConfirm.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <strong>{name}</strong> (ID: {vmid}).
-              This action cannot be undone.
+              {t("resources:actions.deleteConfirm.description", { name, vmid })}
               {isRunning && (
                 <span className="block mt-2 text-amber-600 dark:text-amber-500">
-                  ⚠️ The resource is currently running and will be stopped before
-                  deletion.
+                  {t("resources:actions.deleteConfirm.warningRunning")}
                 </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteMutation.isPending}>
-              Cancel
+              {t("resources:actions.deleteConfirm.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending
+                ? t("resources:actions.deleteConfirm.deleting")
+                : t("resources:actions.deleteConfirm.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

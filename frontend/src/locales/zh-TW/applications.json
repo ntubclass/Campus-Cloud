@@ -1,0 +1,66 @@
+{
+  "page": {
+    "title": "我的申請",
+    "description": "查看您的虛擬機/容器申請紀錄與審核狀態",
+    "noApplications": "尚無申請紀錄",
+    "noApplicationsDescription": "點擊「申請資源」按鈕來提交您的第一個虛擬機申請"
+  },
+  "create": {
+    "title": "申請資源",
+    "heading": "申請虛擬機 / 容器",
+    "description": "填寫申請表單，提交後需等待管理員審核通過後自動建立",
+    "quickTemplate": "快速範本",
+    "customSpec": "自訂規格",
+    "submitButton": "提交申請"
+  },
+  "form": {
+    "reason": "申請原因",
+    "reasonPlaceholder": "請說明您的申請用途..."
+  },
+  "table": {
+    "hostname": "主機名稱",
+    "type": "類型",
+    "reason": "申請原因",
+    "specs": "規格",
+    "status": "狀態",
+    "vmid": "VMID",
+    "applicant": "申請者",
+    "applicationTime": "申請時間",
+    "actions": "操作"
+  },
+  "status": {
+    "pending": "待審核",
+    "approved": "已通過",
+    "rejected": "已拒絕",
+    "vmid": "VMID: {{id}}"
+  },
+  "specs": {
+    "cpu": "{{count}} 核心",
+    "cpu_plural": "{{count}} 核心",
+    "ram": "{{size}} 記憶體",
+    "disk": "{{size}} 硬碟"
+  },
+  "types": {
+    "lxc": "LXC 容器",
+    "qemu": "QEMU 虛擬機"
+  },
+  "templates": {
+    "backToList": "返回列表",
+    "supportsUpdate": "支援更新",
+    "description": "描述",
+    "noDescription": "尚無描述",
+    "categories": "分類",
+    "webInterface": "Web 介面",
+    "defaultUsername": "預設帳號",
+    "defaultPassword": "預設密碼",
+    "defaultInstallScript": "預設安裝腳本",
+    "installScript": "安裝腳本",
+    "defaultResources": "預設資源配置",
+    "officialWebsite": "官方網站",
+    "documentation": "說明文件",
+    "searchPlaceholder": "搜尋範本名稱或描述",
+    "allCategories": "所有分類",
+    "noTemplatesFound": "找不到符合您搜尋條件的快速範本",
+    "port": "Port {{port}}"
+  }
+}

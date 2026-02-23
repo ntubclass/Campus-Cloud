@@ -1,0 +1,26 @@
+{
+  "sidebar": {
+    "dashboard": "儀表板",
+    "myResources": "我的資源",
+    "applications": "我的申請",
+    "resources": "資源管理",
+    "approvals": "申請審核",
+    "admin": "管理員",
+    "settings": "設定",
+    "language": "語言",
+    "appearance": "外觀"
+  },
+  "pageTitle": {
+    "dashboard": "儀表板 - Campus Cloud",
+    "myResources": "我的資源 - Campus Cloud",
+    "applications": "我的申請 - Campus Cloud",
+    "resources": "虛擬機器 - Campus Cloud",
+    "approvals": "申請審核 - Campus Cloud",
+    "admin": "管理員 - Campus Cloud",
+    "settings": "設定 - Campus Cloud"
+  },
+  "dashboard": {
+    "welcome": "嗨，{{name}} 👋",
+    "description": "歡迎回來，很高興再次見到您！"
+  }
+}

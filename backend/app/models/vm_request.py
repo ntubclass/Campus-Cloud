@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 class VMRequestStatus(str, enum.Enum):
     """虛擬機申請狀態"""
+
     pending = "pending"
     approved = "approved"
     rejected = "rejected"
@@ -88,12 +89,13 @@ class VMRequest(SQLModel, table=True):
 
 # ===== API Schemas =====
 
+
 class VMRequestCreate(SQLModel):
     """建立虛擬機申請的 Schema."""
 
     reason: str = Field(min_length=10)
     resource_type: str  # "lxc" 或 "vm"
-    hostname: str = Field(pattern=r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", max_length=63)
+    hostname: str = Field(regex=r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", max_length=63)
     cores: int = 2
     memory: int = 2048
     password: str = Field(min_length=8, max_length=128)

@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { VncScreen } from "react-vnc"
 
 import { Button } from "@/components/ui/button"
@@ -34,6 +35,7 @@ export function VNCConsoleDialog({
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const { t } = useTranslation("resources")
 
   useEffect(() => {
     if (open && vmid) {
@@ -58,11 +60,11 @@ export function VNCConsoleDialog({
           if (data.ticket) {
             setVncTicket(data.ticket)
           } else {
-            setError("無法取得 VNC ticket")
+            setError(t("console.vnc.ticketError"))
           }
         })
         .catch((err) => {
-          setError(`取得 VNC 資訊失敗: ${err.message}`)
+          setError(t("console.vnc.fetchError", { error: err.message }))
         })
         .finally(() => {
           setIsLoading(false)
@@ -110,7 +112,7 @@ export function VNCConsoleDialog({
       const text = await navigator.clipboard.readText()
       vncRef.current?.clipboardPaste?.(text)
     } catch (err) {
-      console.error("無法讀取剪貼簿:", err)
+      console.error("Clipboard error:", err)
     }
   }
 
@@ -175,7 +177,7 @@ export function VNCConsoleDialog({
                           : "bg-zinc-400",
                     )}
                   />
-                  {isConnected ? "已連線" : isLoading ? "連線中..." : "未連線"}
+                  {isConnected ? t("console.status.connected") : isLoading ? t("console.status.connecting") : t("console.status.disconnected")}
                 </span>
               </div>
             </div>
@@ -200,7 +202,7 @@ export function VNCConsoleDialog({
               className="h-8 px-3 text-xs text-zinc-300 hover:text-white hover:bg-zinc-700/50 disabled:opacity-40"
             >
               <Clipboard className="h-3.5 w-3.5 mr-1.5" />
-              貼上
+              {t("console.buttons.paste")}
             </Button>
             <div className="w-px h-6 bg-zinc-700 mx-1" />
             <Button
@@ -209,7 +211,7 @@ export function VNCConsoleDialog({
               onClick={toggleFullscreen}
               disabled={!isConnected}
               className="h-8 w-8 text-zinc-300 hover:text-white hover:bg-zinc-700/50 disabled:opacity-40"
-              title={isFullscreen ? "退出全螢幕" : "全螢幕"}
+              title={isFullscreen ? t("console.buttons.exitFullscreen") : t("console.buttons.fullscreen")}
             >
               {isFullscreen ? (
                 <Minimize2 className="h-4 w-4" />
@@ -222,7 +224,7 @@ export function VNCConsoleDialog({
               size="icon"
               onClick={handleClose}
               className="h-8 w-8 text-zinc-400 hover:text-red-400 hover:bg-red-500/10"
-              title="關閉"
+              title={t("console.buttons.close")}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -237,7 +239,7 @@ export function VNCConsoleDialog({
                   <Power className="h-8 w-8 text-red-400" />
                 </div>
                 <h3 className="text-lg font-medium text-white mb-2">
-                  連線失敗
+                  {t("console.vnc.connectionFailed")}
                 </h3>
                 <p className="text-sm text-zinc-400 mb-6">{error}</p>
                 <Button
@@ -245,7 +247,7 @@ export function VNCConsoleDialog({
                   variant="outline"
                   className="border-zinc-600 text-zinc-300 hover:bg-zinc-800"
                 >
-                  關閉
+                  {t("console.buttons.close")}
                 </Button>
               </div>
             </div>
@@ -263,10 +265,10 @@ export function VNCConsoleDialog({
                   </div>
                 </div>
                 <h3 className="text-lg font-medium text-white mb-2">
-                  正在連接
+                  {t("console.vnc.connecting")}
                 </h3>
                 <p className="text-sm text-zinc-400">
-                  正在建立 VNC 連線至 {vmName || `VM ${vmid}`}...
+                  {t("console.vnc.connectingDescription", { name: vmName || `VM ${vmid}` })}
                 </p>
               </div>
             </div>
@@ -297,9 +299,9 @@ export function VNCConsoleDialog({
 
         <div className="flex items-center justify-between px-4 py-1.5 bg-zinc-800/50 border-t border-zinc-700/50 shrink-0">
           <div className="flex items-center gap-4 text-[11px] text-zinc-500">
-            <span>WebSocket: {wsUrl ? "已連接" : "未連接"}</span>
+            <span>WebSocket: {wsUrl ? t("console.websocket.connected") : t("console.websocket.disconnected")}</span>
             <span>•</span>
-            <span>VNC Protocol v3.8</span>
+            <span>{t("console.protocol.vnc")}</span>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -309,7 +311,7 @@ export function VNCConsoleDialog({
               className="h-7 px-3 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
             >
               <Power className="h-3 w-3 mr-1.5" />
-              中斷連線
+              {t("console.buttons.disconnect")}
             </Button>
           </div>
         </div>
