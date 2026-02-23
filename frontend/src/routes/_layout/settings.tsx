@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
+import { useTranslation } from "react-i18next"
 
 import ChangePassword from "@/components/UserSettings/ChangePassword"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
@@ -6,18 +7,12 @@ import UserInformation from "@/components/UserSettings/UserInformation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
 
-const tabsConfig = [
-  { value: "my-profile", title: "My profile", component: UserInformation },
-  { value: "password", title: "Password", component: ChangePassword },
-  { value: "danger-zone", title: "Danger zone", component: DeleteAccount },
-]
-
 export const Route = createFileRoute("/_layout/settings")({
   component: UserSettings,
   head: () => ({
     meta: [
       {
-        title: "Settings - FastAPI Cloud",
+        title: "Settings - Campus Cloud",
       },
     ],
   }),
@@ -25,6 +20,14 @@ export const Route = createFileRoute("/_layout/settings")({
 
 function UserSettings() {
   const { user: currentUser } = useAuth()
+  const { t } = useTranslation("settings")
+
+  const tabsConfig = [
+    { value: "my-profile", title: t("tabs.myProfile"), component: UserInformation },
+    { value: "password", title: t("tabs.password"), component: ChangePassword },
+    { value: "danger-zone", title: t("tabs.dangerZone"), component: DeleteAccount },
+  ]
+
   const finalTabs = currentUser?.is_superuser
     ? tabsConfig.slice(0, 3)
     : tabsConfig
@@ -36,9 +39,9 @@ function UserSettings() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">User Settings</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("page.title")}</h1>
         <p className="text-muted-foreground">
-          Manage your account settings and preferences
+          {t("page.description")}
         </p>
       </div>
 

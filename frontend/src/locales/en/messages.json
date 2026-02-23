@@ -1,0 +1,30 @@
+{
+  "success": {
+    "title": "Success",
+    "userUpdated": "User updated successfully",
+    "passwordUpdated": "Password updated successfully",
+    "userCreated": "User created successfully",
+    "applicationSubmitted": "Application submitted, awaiting admin approval",
+    "resourceCreated": "Resource created successfully",
+    "applicationApproved": "Application approved, VM is being created",
+    "applicationRejected": "Application rejected"
+  },
+  "error": {
+    "title": "Error",
+    "generic": "Something went wrong. Please try again."
+  },
+  "vm": {
+    "starting": "{{name}} is starting...",
+    "stopping": "{{name}} is stopping...",
+    "rebooting": "{{name}} is rebooting...",
+    "shuttingDown": "{{name}} is shutting down...",
+    "resetting": "{{name}} is resetting...",
+    "deleted": "{{name}} deleted successfully",
+    "startFailed": "Failed to start {{name}}: {{error}}",
+    "stopFailed": "Failed to stop {{name}}: {{error}}",
+    "rebootFailed": "Failed to reboot {{name}}: {{error}}",
+    "shutdownFailed": "Failed to shutdown {{name}}: {{error}}",
+    "resetFailed": "Failed to reset {{name}}: {{error}}",
+    "deleteFailed": "Failed to delete {{name}}: {{error}}"
+  }
+}

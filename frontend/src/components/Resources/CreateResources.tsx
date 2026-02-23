@@ -1,8 +1,10 @@
+import { FastTemplatesTab } from "@/components/Applications/FastTemplatesTab"
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
+import { useTranslation } from "react-i18next"
 import { z } from "zod"
 
 import { LxcService, VmService } from "@/client"
@@ -39,40 +41,45 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
-const formSchema = z.object({
-  resource_type: z.enum(["lxc", "vm"]),
-  hostname: z
-    .string()
-    .min(1, { message: "名稱為必填項" })
-    .regex(/^[a-z0-9-]+$/, {
-      message: "僅允許小寫字母、數字和連字符",
-    }),
-  // LXC specific
-  ostemplate: z.string().optional(),
-  rootfs_size: z.number().min(8).max(500).optional(),
-  // VM specific
-  template_id: z.number().optional(),
-  disk_size: z.number().min(20).max(500).optional(),
-  username: z.string().optional(),
-  // Common fields
-  cores: z.number().min(1).max(8),
-  memory: z.number().min(512).max(32768),
-  password: z
-    .string()
-    .min(1, { message: "密碼為必填項" })
-    .min(6, { message: "密碼至少需要 6 個字符" }),
-  storage: z.string().default("local-lvm"),
-  os_info: z.string().optional(),
-  expiry_date: z.string().optional(),
-})
-
-type FormData = z.infer<typeof formSchema>
-
 const CreateContainer = () => {
+  const { t } = useTranslation(["resources", "validation", "common"])
   const [isOpen, setIsOpen] = useState(false)
   const [resourceType, setResourceType] = useState<"lxc" | "vm">("lxc")
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  const formSchema = useMemo(
+    () =>
+      z.object({
+        resource_type: z.enum(["lxc", "vm"]),
+        hostname: z
+          .string()
+          .min(1, { message: t("validation:name.required") })
+          .regex(/^[a-z0-9-]+$/, {
+            message: t("validation:name.invalid"),
+          }),
+        // LXC specific
+        ostemplate: z.string().optional(),
+        rootfs_size: z.number().min(8).max(500).optional(),
+        // VM specific
+        template_id: z.number().optional(),
+        disk_size: z.number().min(20).max(500).optional(),
+        username: z.string().optional(),
+        // Common fields
+        cores: z.number().min(1).max(8),
+        memory: z.number().min(512).max(32768),
+        password: z
+          .string()
+          .min(1, { message: t("validation:password.required") })
+          .min(6, { message: t("validation:password.minLength", { count: 6 }) }),
+        storage: z.string().default("local-lvm"),
+        os_info: z.string().optional(),
+        expiry_date: z.string().optional(),
+      }),
+    [t],
+  )
+
+  type FormData = z.infer<typeof formSchema>
 
   const form = useForm<FormData>({
     resolver: standardSchemaResolver(formSchema),
@@ -112,7 +119,7 @@ const CreateContainer = () => {
     mutationFn: (data: FormData) => {
       if (data.resource_type === "lxc") {
         if (!data.ostemplate || !data.rootfs_size) {
-          throw new Error("LXC容器需要選擇作業系統模板和磁碟大小")
+          throw new Error(t("validation:requirement.lxc"))
         }
         return LxcService.createLxc({
           requestBody: {
@@ -123,7 +130,7 @@ const CreateContainer = () => {
             rootfs_size: data.rootfs_size,
             password: data.password,
             storage: data.storage,
-            environment_type: "自訂規格",
+            environment_type: t("resources:create.customSpec"),
             os_info: data.os_info || null,
             expiry_date: data.expiry_date || null,
             start: true,
@@ -132,7 +139,7 @@ const CreateContainer = () => {
         })
       }
       if (!data.template_id || !data.disk_size || !data.username) {
-        throw new Error("VM需要選擇作業系統、使用者名稱和磁碟大小")
+        throw new Error(t("validation:requirement.vm"))
       }
       return VmService.createVm({
         requestBody: {
@@ -143,7 +150,7 @@ const CreateContainer = () => {
           cores: data.cores,
           memory: data.memory,
           disk_size: data.disk_size,
-          environment_type: "自訂規格",
+          environment_type: t("resources:create.customSpec"),
           os_info: data.os_info || null,
           expiry_date: data.expiry_date || null,
           start: true,
@@ -151,7 +158,7 @@ const CreateContainer = () => {
       })
     },
     onSuccess: (data) => {
-      showSuccessToast(`${data.message || "建立成功"}`)
+      showSuccessToast(`${data.message || t("messages:success.resourceCreated")}`)
       form.reset()
       setIsOpen(false)
     },
@@ -170,28 +177,26 @@ const CreateContainer = () => {
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          建立資源
+          {t("resources:create.title")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>建立新資源</DialogTitle>
+      <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col hidden-scroll">
+        <DialogHeader className="shrink-0 pb-2">
+          <DialogTitle>{t("resources:create.heading")}</DialogTitle>
           <DialogDescription>
-            配置並建立 LXC 容器或 QEMU 虛擬機
+            {t("resources:create.description")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto hidden-scroll pl-1 pr-4 -mr-4 pb-1">
             <Tabs defaultValue="custom" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="quick">快速範本</TabsTrigger>
-                <TabsTrigger value="custom">自訂規格</TabsTrigger>
+                <TabsTrigger value="quick">{t("resources:create.quickTemplate")}</TabsTrigger>
+                <TabsTrigger value="custom">{t("resources:create.customSpec")}</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="quick" className="space-y-4">
-                <div className="text-center py-8 text-muted-foreground">
-                  快速範本功能即將推出
-                </div>
+              <TabsContent value="quick" className="mt-4 pb-4">
+                <FastTemplatesTab />
               </TabsContent>
 
               <TabsContent value="custom" className="space-y-4 py-4">
@@ -205,13 +210,13 @@ const CreateContainer = () => {
                   className="w-full"
                 >
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="lxc">LXC 容器</TabsTrigger>
-                    <TabsTrigger value="vm">QEMU 虛擬機</TabsTrigger>
+                    <TabsTrigger value="lxc">{t("resources:form.type.lxc")}</TabsTrigger>
+                    <TabsTrigger value="vm">{t("resources:form.type.qemu")}</TabsTrigger>
                   </TabsList>
 
-                  {/* LXC Container Form */}
-                  <TabsContent value="lxc" className="space-y-4 mt-4">
-                    <div className="grid gap-4">
+                  <TabsContent value="lxc" className="mt-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-4">
                       {/* Container Name */}
                       <FormField
                         control={form.control}
@@ -219,7 +224,7 @@ const CreateContainer = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              容器名稱{" "}
+                              {t("resources:form.name")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
@@ -241,7 +246,7 @@ const CreateContainer = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              作業系統映像檔{" "}
+                              {t("resources:form.osTemplate")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <Select
@@ -250,13 +255,13 @@ const CreateContainer = () => {
                             >
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="選擇作業系統" />
+                                  <SelectValue placeholder={t("resources:form.os")} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
                                 {lxcTemplatesLoading ? (
                                   <SelectItem value="loading" disabled>
-                                    載入中...
+                                    {t("common:status.loading")}
                                   </SelectItem>
                                 ) : lxcTemplates && lxcTemplates.length > 0 ? (
                                   lxcTemplates.map((template) => (
@@ -272,7 +277,7 @@ const CreateContainer = () => {
                                   ))
                                 ) : (
                                   <SelectItem value="none" disabled>
-                                    無可用模板
+                                    {t("common:common.none")}
                                   </SelectItem>
                                 )}
                               </SelectContent>
@@ -288,7 +293,7 @@ const CreateContainer = () => {
                         name="os_info"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>作業系統資訊（選填）</FormLabel>
+                            <FormLabel>{t("resources:form.osInfo")}</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="例如：Ubuntu 22.04 LTS"
@@ -307,7 +312,7 @@ const CreateContainer = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              Root 密碼{" "}
+                              {t("resources:form.rootPassword")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
@@ -330,7 +335,7 @@ const CreateContainer = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              到期日（選填，留空表示無期限）
+                              {t("resources:form.expiryDate")}
                             </FormLabel>
                             <FormControl>
                               <Input type="date" {...field} />
@@ -340,9 +345,11 @@ const CreateContainer = () => {
                         )}
                       />
 
+                      </div>
+
                       {/* Hardware Resources */}
-                      <div className="space-y-6 border rounded-lg p-4">
-                        <h3 className="font-medium">硬體資源配置</h3>
+                      <div className="space-y-6 border rounded-lg p-5 bg-card/50 h-fit sticky top-0">
+                        <h3 className="font-medium">{t("resources:form.hardware")}</h3>
 
                         {/* CPU Cores */}
                         <FormField
@@ -351,7 +358,7 @@ const CreateContainer = () => {
                           render={({ field }) => (
                             <FormItem>
                               <div className="flex items-center justify-between">
-                                <FormLabel>CPU 核心數</FormLabel>
+                                <FormLabel>{t("resources:form.cpuCores")}</FormLabel>
                                 <span className="text-sm font-semibold text-primary">
                                   {field.value} Cores
                                 </span>
@@ -385,7 +392,7 @@ const CreateContainer = () => {
                           render={({ field }) => (
                             <FormItem>
                               <div className="flex items-center justify-between">
-                                <FormLabel>記憶體 (RAM)</FormLabel>
+                                <FormLabel>{t("resources:form.memory")}</FormLabel>
                                 <span className="text-sm font-semibold text-primary">
                                   {(field.value / 1024).toFixed(1)} GB
                                 </span>
@@ -419,7 +426,7 @@ const CreateContainer = () => {
                           render={({ field }) => (
                             <FormItem>
                               <div className="flex items-center justify-between">
-                                <FormLabel>硬碟空間 (Disk)</FormLabel>
+                                <FormLabel>{t("resources:form.disk")}</FormLabel>
                                 <div className="flex items-center gap-2">
                                   <Input
                                     type="number"
@@ -459,8 +466,9 @@ const CreateContainer = () => {
                   </TabsContent>
 
                   {/* VM Form */}
-                  <TabsContent value="vm" className="space-y-4 mt-4">
-                    <div className="grid gap-4">
+                  <TabsContent value="vm" className="mt-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-4">
                       {/* VM Name */}
                       <FormField
                         control={form.control}
@@ -468,7 +476,7 @@ const CreateContainer = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              虛擬機名稱{" "}
+                              {t("resources:form.vmName")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
@@ -490,7 +498,7 @@ const CreateContainer = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              作業系統{" "}
+                              {t("resources:form.os")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <Select
@@ -501,13 +509,13 @@ const CreateContainer = () => {
                             >
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="選擇作業系統" />
+                                  <SelectValue placeholder={t("resources:form.os")} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
                                 {vmTemplatesLoading ? (
                                   <SelectItem value="loading" disabled>
-                                    載入中...
+                                    {t("common:status.loading")}
                                   </SelectItem>
                                 ) : vmTemplates && vmTemplates.length > 0 ? (
                                   vmTemplates.map((template) => (
@@ -520,7 +528,7 @@ const CreateContainer = () => {
                                   ))
                                 ) : (
                                   <SelectItem value="none" disabled>
-                                    無可用作業系統
+                                    {t("common:common.none")}
                                   </SelectItem>
                                 )}
                               </SelectContent>
@@ -536,7 +544,7 @@ const CreateContainer = () => {
                         name="os_info"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>作業系統資訊（選填）</FormLabel>
+                            <FormLabel>{t("resources:form.osInfo")}</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="例如：Ubuntu 22.04 LTS"
@@ -555,7 +563,7 @@ const CreateContainer = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              使用者名稱{" "}
+                              {t("resources:form.username")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
@@ -577,7 +585,8 @@ const CreateContainer = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              密碼 <span className="text-destructive">*</span>
+                              {t("resources:form.password")}{" "}
+                              <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -599,7 +608,7 @@ const CreateContainer = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              到期日（選填，留空表示無期限）
+                              {t("resources:form.expiryDate")}
                             </FormLabel>
                             <FormControl>
                               <Input type="date" {...field} />
@@ -609,9 +618,11 @@ const CreateContainer = () => {
                         )}
                       />
 
+                      </div>
+
                       {/* Hardware Resources */}
-                      <div className="space-y-6 border rounded-lg p-4">
-                        <h3 className="font-medium">硬體資源配置</h3>
+                      <div className="space-y-6 border rounded-lg p-5 bg-card/50 h-fit sticky top-0">
+                        <h3 className="font-medium">{t("resources:form.hardware")}</h3>
 
                         {/* CPU Cores */}
                         <FormField
@@ -620,7 +631,7 @@ const CreateContainer = () => {
                           render={({ field }) => (
                             <FormItem>
                               <div className="flex items-center justify-between">
-                                <FormLabel>CPU 核心數</FormLabel>
+                                <FormLabel>{t("resources:form.cpuCores")}</FormLabel>
                                 <span className="text-sm font-semibold text-primary">
                                   {field.value} Cores
                                 </span>
@@ -654,7 +665,7 @@ const CreateContainer = () => {
                           render={({ field }) => (
                             <FormItem>
                               <div className="flex items-center justify-between">
-                                <FormLabel>記憶體 (RAM)</FormLabel>
+                                <FormLabel>{t("resources:form.memory")}</FormLabel>
                                 <span className="text-sm font-semibold text-primary">
                                   {(field.value / 1024).toFixed(1)} GB
                                 </span>
@@ -688,7 +699,7 @@ const CreateContainer = () => {
                           render={({ field }) => (
                             <FormItem>
                               <div className="flex items-center justify-between">
-                                <FormLabel>硬碟空間 (Disk)</FormLabel>
+                                <FormLabel>{t("resources:form.disk")}</FormLabel>
                                 <div className="flex items-center gap-2">
                                   <Input
                                     type="number"
@@ -733,11 +744,11 @@ const CreateContainer = () => {
             <DialogFooter className="mt-6">
               <DialogClose asChild>
                 <Button variant="outline" disabled={mutation.isPending}>
-                  取消
+                  {t("common:buttons.cancel")}
                 </Button>
               </DialogClose>
               <LoadingButton type="submit" loading={mutation.isPending}>
-                建立資源
+                {t("resources:create.submitButton")}
               </LoadingButton>
             </DialogFooter>
           </form>

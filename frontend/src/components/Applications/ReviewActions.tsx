@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Check, X } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
+import { useTranslation } from "react-i18next"
 
 import { type VMRequestPublic, VmRequestsService } from "@/client"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +34,7 @@ const ReviewDialog = ({
   open,
   onOpenChange,
 }: ReviewDialogProps) => {
+  const { t } = useTranslation(["approvals", "messages", "common"])
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { handleSubmit } = useForm()
@@ -48,7 +50,10 @@ const ReviewDialog = ({
         },
       }),
     onSuccess: () => {
-      const msg = action === "approved" ? "已通過，虛擬機正在建立中" : "已拒絕申請"
+      const msg =
+        action === "approved"
+          ? t("messages:success.applicationApproved")
+          : t("messages:success.applicationRejected")
       showSuccessToast(msg)
       onOpenChange(false)
       setComment("")
@@ -65,47 +70,55 @@ const ReviewDialog = ({
         <form onSubmit={handleSubmit(() => mutation.mutate())}>
           <DialogHeader>
             <DialogTitle>
-              {action === "approved" ? "通過申請" : "拒絕申請"}
+              {action === "approved"
+                ? t("approvals:review.approveTitle")
+                : t("approvals:review.rejectTitle")}
             </DialogTitle>
             <DialogDescription>
               {action === "approved"
-                ? `確認通過此申請後，將自動建立 ${request.resource_type === "lxc" ? "LXC 容器" : "QEMU 虛擬機"} 並啟動。`
-                : "確認拒絕此申請？"}
+                ? t("approvals:review.approveDescription", {
+                    type:
+                      request.resource_type === "lxc"
+                        ? "LXC Container"
+                        : "QEMU Virtual Machine",
+                  })
+                : t("approvals:review.rejectDescription")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4 space-y-4">
             <div className="rounded-lg border p-3 space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">申請者</span>
+                <span className="text-muted-foreground">{t("approvals:review.applicant")}</span>
                 <span>{request.user_full_name || request.user_email}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">主機名稱</span>
+                <span className="text-muted-foreground">{t("approvals:review.hostname")}</span>
                 <span className="font-medium">{request.hostname}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">類型</span>
+                <span className="text-muted-foreground">{t("approvals:review.type")}</span>
                 <Badge variant="secondary">
                   {request.resource_type === "lxc" ? "LXC" : "QEMU"}
                 </Badge>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">規格</span>
+                <span className="text-muted-foreground">{t("approvals:review.specs")}</span>
                 <span>
                   {request.cores} Core / {(request.memory / 1024).toFixed(1)} GB RAM
                 </span>
               </div>
               <div>
-                <span className="text-muted-foreground">申請原因</span>
+                <span className="text-muted-foreground">{t("approvals:review.reason")}</span>
                 <p className="mt-1 text-sm">{request.reason}</p>
               </div>
             </div>
 
             <div>
-              <label className="text-sm font-medium">審核備註（選填）</label>
+              <label htmlFor="review-comment" className="text-sm font-medium">{t("approvals:review.reviewNote")}</label>
               <Textarea
-                placeholder="輸入審核備註..."
+                id="review-comment"
+                placeholder={t("approvals:review.reviewNotePlaceholder")}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 className="mt-1"
@@ -116,7 +129,7 @@ const ReviewDialog = ({
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline" disabled={mutation.isPending}>
-                取消
+                {t("approvals:review.cancel")}
               </Button>
             </DialogClose>
             <LoadingButton
@@ -124,7 +137,9 @@ const ReviewDialog = ({
               loading={mutation.isPending}
               variant={action === "approved" ? "default" : "destructive"}
             >
-              {action === "approved" ? "確認通過" : "確認拒絕"}
+              {action === "approved"
+                ? t("approvals:review.confirmApprove")
+                : t("approvals:review.confirmReject")}
             </LoadingButton>
           </DialogFooter>
         </form>
@@ -138,13 +153,17 @@ interface ReviewActionsProps {
 }
 
 export const ReviewActions = ({ request }: ReviewActionsProps) => {
+  const { t } = useTranslation(["approvals"])
   const [approveOpen, setApproveOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
 
   if (request.status !== "pending") {
-    const statusMap: Record<string, { label: string; variant: "default" | "destructive" | "outline" }> = {
-      approved: { label: "已通過", variant: "default" },
-      rejected: { label: "已拒絕", variant: "destructive" },
+    const statusMap: Record<
+      string,
+      { label: string; variant: "default" | "destructive" | "outline" }
+    > = {
+      approved: { label: t("approvals:filters.approved"), variant: "default" },
+      rejected: { label: t("approvals:filters.rejected"), variant: "destructive" },
     }
     const s = statusMap[request.status]
     return (
@@ -165,7 +184,7 @@ export const ReviewActions = ({ request }: ReviewActionsProps) => {
         onClick={() => setApproveOpen(true)}
       >
         <Check className="mr-1 h-4 w-4" />
-        通過
+        {t("approvals:review.approve")}
       </Button>
       <Button
         size="sm"
@@ -173,7 +192,7 @@ export const ReviewActions = ({ request }: ReviewActionsProps) => {
         onClick={() => setRejectOpen(true)}
       >
         <X className="mr-1 h-4 w-4" />
-        拒絕
+        {t("approvals:review.reject")}
       </Button>
 
       <ReviewDialog

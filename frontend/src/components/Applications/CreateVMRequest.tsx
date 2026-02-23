@@ -1,8 +1,10 @@
+import { FastTemplatesTab } from "./FastTemplatesTab"
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Plus } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
+import { useTranslation } from "react-i18next"
 import { z } from "zod"
 
 import { LxcService, VmRequestsService, VmService } from "@/client"
@@ -40,41 +42,46 @@ import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
-const formSchema = z.object({
-  resource_type: z.enum(["lxc", "vm"]),
-  reason: z
-    .string()
-    .min(1, { message: "申請原因為必填項" })
-    .min(10, { message: "申請原因至少需要 10 個字符" }),
-  hostname: z
-    .string()
-    .min(1, { message: "名稱為必填項" })
-    .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, {
-      message: "僅允許小寫字母、數字和連字符，且不能以連字符開頭或結尾",
-    }),
-  ostemplate: z.string().optional(),
-  rootfs_size: z.number().min(8).max(500).optional(),
-  template_id: z.number().optional(),
-  disk_size: z.number().min(20).max(500).optional(),
-  username: z.string().optional(),
-  cores: z.number().min(1).max(8),
-  memory: z.number().min(512).max(32768),
-  password: z
-    .string()
-    .min(1, { message: "密碼為必填項" })
-    .min(8, { message: "密碼至少需要 8 個字符" }),
-  storage: z.string().default("local-lvm"),
-  os_info: z.string().optional(),
-  expiry_date: z.string().optional(),
-})
-
-type FormData = z.infer<typeof formSchema>
-
 const CreateVMRequest = () => {
+  const { t } = useTranslation(["applications", "resources", "validation", "common", "messages"])
   const [isOpen, setIsOpen] = useState(false)
   const [resourceType, setResourceType] = useState<"lxc" | "vm">("lxc")
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+
+  const formSchema = useMemo(
+    () =>
+      z.object({
+        resource_type: z.enum(["lxc", "vm"]),
+        reason: z
+          .string()
+          .min(1, { message: t("validation:reason.required") })
+          .min(10, { message: t("validation:reason.minLength", { count: 10 }) }),
+        hostname: z
+          .string()
+          .min(1, { message: t("validation:name.required") })
+          .regex(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/, {
+            message: t("validation:name.invalid"),
+          }),
+        ostemplate: z.string().optional(),
+        rootfs_size: z.number().min(8).max(500).optional(),
+        template_id: z.number().optional(),
+        disk_size: z.number().min(20).max(500).optional(),
+        username: z.string().optional(),
+        cores: z.number().min(1).max(8),
+        memory: z.number().min(512).max(32768),
+        password: z
+          .string()
+          .min(1, { message: t("validation:password.required") })
+          .min(8, { message: t("validation:password.minLength", { count: 8 }) }),
+        storage: z.string().default("local-lvm"),
+        os_info: z.string().optional(),
+        expiry_date: z.string().optional(),
+      }),
+    [t],
+  )
+
+  type FormData = z.infer<typeof formSchema>
 
   const form = useForm<FormData>({
     resolver: standardSchemaResolver(formSchema),
@@ -113,7 +120,7 @@ const CreateVMRequest = () => {
     mutationFn: (data: FormData) => {
       if (data.resource_type === "lxc") {
         if (!data.ostemplate || !data.rootfs_size) {
-          throw new Error("LXC容器需要選擇作業系統模板和磁碟大小")
+          throw new Error(t("validation:requirement.lxc"))
         }
         return VmRequestsService.createVmRequest({
           requestBody: {
@@ -132,7 +139,7 @@ const CreateVMRequest = () => {
         })
       }
       if (!data.template_id || !data.disk_size || !data.username) {
-        throw new Error("VM需要選擇作業系統、使用者名稱和磁碟大小")
+        throw new Error(t("validation:requirement.vm"))
       }
       return VmRequestsService.createVmRequest({
         requestBody: {
@@ -151,7 +158,7 @@ const CreateVMRequest = () => {
       })
     },
     onSuccess: () => {
-      showSuccessToast("申請已提交，等待管理員審核")
+      showSuccessToast(t("messages:success.applicationSubmitted"))
       form.reset()
       setResourceType("lxc")
       setIsOpen(false)
@@ -177,28 +184,26 @@ const CreateVMRequest = () => {
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          申請資源
+          {t("applications:create.title")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>申請虛擬機 / 容器</DialogTitle>
+      <DialogContent className="sm:max-w-3xl md:max-w-4xl lg:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col hidden-scroll">
+        <DialogHeader className="shrink-0 pb-2">
+          <DialogTitle>{t("applications:create.heading")}</DialogTitle>
           <DialogDescription>
-            填寫申請表單，提交後需等待管理員審核通過後自動建立
+            {t("applications:create.description")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto hidden-scroll pl-1 pr-4 -mr-4 pb-1">
             <Tabs defaultValue="custom" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="quick">快速範本</TabsTrigger>
-                <TabsTrigger value="custom">自訂規格</TabsTrigger>
+                <TabsTrigger value="quick">{t("applications:create.quickTemplate")}</TabsTrigger>
+                <TabsTrigger value="custom">{t("applications:create.customSpec")}</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="quick" className="space-y-4">
-                <div className="text-center py-8 text-muted-foreground">
-                  快速範本功能即將推出
-                </div>
+              <TabsContent value="quick" className="mt-4 pb-4">
+                <FastTemplatesTab />
               </TabsContent>
 
               <TabsContent value="custom" className="space-y-4 py-4">
@@ -211,20 +216,21 @@ const CreateVMRequest = () => {
                   className="w-full"
                 >
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="lxc">LXC 容器</TabsTrigger>
-                    <TabsTrigger value="vm">QEMU 虛擬機</TabsTrigger>
+                    <TabsTrigger value="lxc">{t("resources:form.type.lxc")}</TabsTrigger>
+                    <TabsTrigger value="vm">{t("resources:form.type.qemu")}</TabsTrigger>
                   </TabsList>
 
                   {/* LXC Container Form */}
-                  <TabsContent value="lxc" className="space-y-4 mt-4">
-                    <div className="grid gap-4">
+                  <TabsContent value="lxc" className="mt-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-4">
                       <FormField
                         control={form.control}
                         name="hostname"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              容器名稱{" "}
+                              {t("resources:form.name")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
@@ -245,7 +251,7 @@ const CreateVMRequest = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              作業系統映像檔{" "}
+                              {t("resources:form.osTemplate")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <Select
@@ -254,13 +260,13 @@ const CreateVMRequest = () => {
                             >
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="選擇作業系統" />
+                                  <SelectValue placeholder={t("resources:form.os")} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
                                 {lxcTemplatesLoading ? (
                                   <SelectItem value="loading" disabled>
-                                    載入中...
+                                    {t("common:status.loading")}
                                   </SelectItem>
                                 ) : lxcTemplates && lxcTemplates.length > 0 ? (
                                   lxcTemplates.map((template) => (
@@ -276,7 +282,7 @@ const CreateVMRequest = () => {
                                   ))
                                 ) : (
                                   <SelectItem value="none" disabled>
-                                    無可用模板
+                                    {t("common:common.none")}
                                   </SelectItem>
                                 )}
                               </SelectContent>
@@ -291,7 +297,7 @@ const CreateVMRequest = () => {
                         name="os_info"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>作業系統資訊（選填）</FormLabel>
+                            <FormLabel>{t("resources:form.osInfo")}</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="例如：Ubuntu 22.04 LTS"
@@ -309,7 +315,7 @@ const CreateVMRequest = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              Root 密碼{" "}
+                              {t("resources:form.rootPassword")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
@@ -331,7 +337,7 @@ const CreateVMRequest = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              到期日（選填，留空表示無期限）
+                              {t("resources:form.expiryDate")}
                             </FormLabel>
                             <FormControl>
                               <Input type="date" {...field} />
@@ -341,8 +347,9 @@ const CreateVMRequest = () => {
                         )}
                       />
 
-                      <div className="space-y-6 border rounded-lg p-4">
-                        <h3 className="font-medium">硬體資源配置</h3>
+                      </div>
+                      <div className="space-y-6 border rounded-lg p-5 bg-card/50 h-fit sticky top-0">
+                        <h3 className="font-medium">{t("resources:form.hardware")}</h3>
 
                         <FormField
                           control={form.control}
@@ -350,7 +357,7 @@ const CreateVMRequest = () => {
                           render={({ field }) => (
                             <FormItem>
                               <div className="flex items-center justify-between">
-                                <FormLabel>CPU 核心數</FormLabel>
+                                <FormLabel>{t("resources:form.cpuCores")}</FormLabel>
                                 <span className="text-sm font-semibold text-primary">
                                   {field.value} Cores
                                 </span>
@@ -383,7 +390,7 @@ const CreateVMRequest = () => {
                           render={({ field }) => (
                             <FormItem>
                               <div className="flex items-center justify-between">
-                                <FormLabel>記憶體 (RAM)</FormLabel>
+                                <FormLabel>{t("resources:form.memory")}</FormLabel>
                                 <span className="text-sm font-semibold text-primary">
                                   {(field.value / 1024).toFixed(1)} GB
                                 </span>
@@ -416,7 +423,7 @@ const CreateVMRequest = () => {
                           render={({ field }) => (
                             <FormItem>
                               <div className="flex items-center justify-between">
-                                <FormLabel>硬碟空間 (Disk)</FormLabel>
+                                <FormLabel>{t("resources:form.disk")}</FormLabel>
                                 <div className="flex items-center gap-2">
                                   <Input
                                     type="number"
@@ -456,15 +463,16 @@ const CreateVMRequest = () => {
                   </TabsContent>
 
                   {/* VM Form */}
-                  <TabsContent value="vm" className="space-y-4 mt-4">
-                    <div className="grid gap-4">
+                  <TabsContent value="vm" className="mt-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-4">
                       <FormField
                         control={form.control}
                         name="hostname"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              虛擬機名稱{" "}
+                              {t("resources:form.vmName")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
@@ -485,7 +493,7 @@ const CreateVMRequest = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              作業系統{" "}
+                              {t("resources:form.os")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <Select
@@ -496,13 +504,13 @@ const CreateVMRequest = () => {
                             >
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="選擇作業系統" />
+                                  <SelectValue placeholder={t("resources:form.os")} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
                                 {vmTemplatesLoading ? (
                                   <SelectItem value="loading" disabled>
-                                    載入中...
+                                    {t("common:status.loading")}
                                   </SelectItem>
                                 ) : vmTemplates && vmTemplates.length > 0 ? (
                                   vmTemplates.map((template) => (
@@ -515,7 +523,7 @@ const CreateVMRequest = () => {
                                   ))
                                 ) : (
                                   <SelectItem value="none" disabled>
-                                    無可用作業系統
+                                    {t("common:common.none")}
                                   </SelectItem>
                                 )}
                               </SelectContent>
@@ -530,7 +538,7 @@ const CreateVMRequest = () => {
                         name="os_info"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>作業系統資訊（選填）</FormLabel>
+                            <FormLabel>{t("resources:form.osInfo")}</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="例如：Ubuntu 22.04 LTS"
@@ -548,7 +556,7 @@ const CreateVMRequest = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              使用者名稱{" "}
+                              {t("resources:form.username")}{" "}
                               <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
@@ -569,7 +577,8 @@ const CreateVMRequest = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              密碼 <span className="text-destructive">*</span>
+                              {t("resources:form.password")}{" "}
+                              <span className="text-destructive">*</span>
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -590,7 +599,7 @@ const CreateVMRequest = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>
-                              到期日（選填，留空表示無期限）
+                              {t("resources:form.expiryDate")}
                             </FormLabel>
                             <FormControl>
                               <Input type="date" {...field} />
@@ -600,8 +609,9 @@ const CreateVMRequest = () => {
                         )}
                       />
 
-                      <div className="space-y-6 border rounded-lg p-4">
-                        <h3 className="font-medium">硬體資源配置</h3>
+                      </div>
+                      <div className="space-y-6 border rounded-lg p-5 bg-card/50 h-fit sticky top-0">
+                        <h3 className="font-medium">{t("resources:form.hardware")}</h3>
 
                         <FormField
                           control={form.control}
@@ -609,7 +619,7 @@ const CreateVMRequest = () => {
                           render={({ field }) => (
                             <FormItem>
                               <div className="flex items-center justify-between">
-                                <FormLabel>CPU 核心數</FormLabel>
+                                <FormLabel>{t("resources:form.cpuCores")}</FormLabel>
                                 <span className="text-sm font-semibold text-primary">
                                   {field.value} Cores
                                 </span>
@@ -642,7 +652,7 @@ const CreateVMRequest = () => {
                           render={({ field }) => (
                             <FormItem>
                               <div className="flex items-center justify-between">
-                                <FormLabel>記憶體 (RAM)</FormLabel>
+                                <FormLabel>{t("resources:form.memory")}</FormLabel>
                                 <span className="text-sm font-semibold text-primary">
                                   {(field.value / 1024).toFixed(1)} GB
                                 </span>
@@ -675,7 +685,7 @@ const CreateVMRequest = () => {
                           render={({ field }) => (
                             <FormItem>
                               <div className="flex items-center justify-between">
-                                <FormLabel>硬碟空間 (Disk)</FormLabel>
+                                <FormLabel>{t("resources:form.disk")}</FormLabel>
                                 <div className="flex items-center gap-2">
                                   <Input
                                     type="number"
@@ -724,11 +734,12 @@ const CreateVMRequest = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      申請原因 <span className="text-destructive">*</span>
+                      {t("applications:form.reason")}{" "}
+                      <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="請詳細說明申請此虛擬機/容器的用途與原因..."
+                        placeholder={t("applications:form.reasonPlaceholder")}
                         className="min-h-[100px]"
                         {...field}
                         required
@@ -743,11 +754,11 @@ const CreateVMRequest = () => {
             <DialogFooter className="mt-6">
               <DialogClose asChild>
                 <Button variant="outline" disabled={mutation.isPending}>
-                  取消
+                  {t("common:buttons.cancel")}
                 </Button>
               </DialogClose>
               <LoadingButton type="submit" loading={mutation.isPending}>
-                提交申請
+                {t("applications:create.submitButton")}
               </LoadingButton>
             </DialogFooter>
           </form>

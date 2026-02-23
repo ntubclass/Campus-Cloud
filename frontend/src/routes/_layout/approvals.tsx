@@ -1,10 +1,11 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { ClipboardCheck } from "lucide-react"
-import { Suspense, useState } from "react"
+import { Suspense, useMemo, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 import { type VMRequestStatus, UsersService, VmRequestsService } from "@/client"
-import { adminRequestColumns } from "@/components/Applications/adminColumns"
+import { createAdminRequestColumns } from "@/components/Applications/adminColumns"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingItems from "@/components/Pending/PendingItems"
 import { Badge } from "@/components/ui/badge"
@@ -45,9 +46,12 @@ function AdminRequestsTableContent({
 }: {
   status: VMRequestStatus | null
 }) {
+  const { t } = useTranslation(["approvals"])
   const { data } = useSuspenseQuery(
     getAdminRequestsQueryOptions(status),
   )
+
+  const columns = useMemo(() => createAdminRequestColumns(t), [t])
 
   if (data.data.length === 0) {
     return (
@@ -55,17 +59,17 @@ function AdminRequestsTableContent({
         <div className="rounded-full bg-muted p-4 mb-4">
           <ClipboardCheck className="h-8 w-8 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-semibold">沒有申請紀錄</h3>
+        <h3 className="text-lg font-semibold">{t("approvals:page.noApplications")}</h3>
         <p className="text-muted-foreground">
           {status === "pending"
-            ? "目前沒有待審核的申請"
-            : "目前沒有符合篩選條件的申請"}
+            ? t("approvals:page.noApplicationsDescription")
+            : t("approvals:page.noMatch")}
         </p>
       </div>
     )
   }
 
-  return <DataTable columns={adminRequestColumns} data={data.data} />
+  return <DataTable columns={columns} data={data.data} />
 }
 
 function AdminRequestsTable({
@@ -100,6 +104,7 @@ function PendingCountBadge() {
 }
 
 function Approvals() {
+  const { t } = useTranslation(["approvals"])
   const [statusFilter, setStatusFilter] = useState<VMRequestStatus | null>(
     "pending",
   )
@@ -108,9 +113,9 @@ function Approvals() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">申請審核</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("approvals:page.title")}</h1>
           <p className="text-muted-foreground">
-            審核使用者的虛擬機/容器申請
+            {t("approvals:page.description")}
           </p>
         </div>
       </div>
@@ -123,12 +128,12 @@ function Approvals() {
       >
         <TabsList>
           <TabsTrigger value="pending">
-            待審核
+            {t("approvals:filters.pending")}
             <PendingCountBadge />
           </TabsTrigger>
-          <TabsTrigger value="approved">已通過</TabsTrigger>
-          <TabsTrigger value="rejected">已拒絕</TabsTrigger>
-          <TabsTrigger value="all">全部</TabsTrigger>
+          <TabsTrigger value="approved">{t("approvals:filters.approved")}</TabsTrigger>
+          <TabsTrigger value="rejected">{t("approvals:filters.rejected")}</TabsTrigger>
+          <TabsTrigger value="all">{t("approvals:filters.all")}</TabsTrigger>
         </TabsList>
       </Tabs>
 

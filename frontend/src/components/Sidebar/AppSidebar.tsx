@@ -6,8 +6,10 @@ import {
   ServerCog,
   Users,
 } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 import { SidebarAppearance } from "@/components/Common/Appearance"
+import { SidebarLanguageSwitcher } from "@/components/Common/LanguageSwitcher"
 import { Logo } from "@/components/Common/Logo"
 import {
   Sidebar,
@@ -19,22 +21,23 @@ import useAuth from "@/hooks/useAuth"
 import { type Item, Main } from "./Main"
 import { User } from "./User"
 
-const baseItems: Item[] = [
-  { icon: Home, title: "Dashboard", path: "/" },
-  { icon: ServerCog, title: "My Resources", path: "/my-resources" },
-  { icon: FileText, title: "Applications", path: "/applications" },
-]
-
-const adminItems: Item[] = [
-  { icon: Home, title: "Dashboard", path: "/" },
-  { icon: ServerCog, title: "My Resources", path: "/my-resources" },
-  { icon: Monitor, title: "Resources", path: "/resources" },
-  { icon: ClipboardCheck, title: "Approvals", path: "/approvals" },
-  { icon: Users, title: "Admin", path: "/admin" },
-]
-
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
+  const { t } = useTranslation("navigation")
+
+  const baseItems: Item[] = [
+    { icon: Home, title: t("sidebar.dashboard"), path: "/" },
+    { icon: ServerCog, title: t("sidebar.myResources"), path: "/my-resources" },
+    { icon: FileText, title: t("sidebar.applications"), path: "/applications" },
+  ]
+
+  const adminItems: Item[] = [
+    { icon: Home, title: t("sidebar.dashboard"), path: "/" },
+    { icon: ServerCog, title: t("sidebar.myResources"), path: "/my-resources" },
+    { icon: Monitor, title: t("sidebar.resources"), path: "/resources" },
+    { icon: ClipboardCheck, title: t("sidebar.approvals"), path: "/approvals" },
+    { icon: Users, title: t("sidebar.admin"), path: "/admin" },
+  ]
 
   const items = currentUser?.is_superuser ? adminItems : baseItems
 
@@ -47,6 +50,7 @@ export function AppSidebar() {
         <Main items={items} />
       </SidebarContent>
       <SidebarFooter>
+        <SidebarLanguageSwitcher />
         <SidebarAppearance />
         <User user={currentUser} />
       </SidebarFooter>

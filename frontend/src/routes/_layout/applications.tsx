@@ -1,10 +1,11 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { FileText } from "lucide-react"
-import { Suspense } from "react"
+import { Suspense, useMemo } from "react"
+import { useTranslation } from "react-i18next"
 
 import { VmRequestsService } from "@/client"
-import { myRequestColumns } from "@/components/Applications/columns"
+import { createMyRequestColumns } from "@/components/Applications/columns"
 import CreateVMRequest from "@/components/Applications/CreateVMRequest"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingItems from "@/components/Pending/PendingItems"
@@ -28,7 +29,10 @@ export const Route = createFileRoute("/_layout/applications")({
 })
 
 function RequestsTableContent() {
+  const { t } = useTranslation(["applications"])
   const { data } = useSuspenseQuery(getMyRequestsQueryOptions())
+
+  const columns = useMemo(() => createMyRequestColumns(t), [t])
 
   if (data.data.length === 0) {
     return (
@@ -36,15 +40,15 @@ function RequestsTableContent() {
         <div className="rounded-full bg-muted p-4 mb-4">
           <FileText className="h-8 w-8 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-semibold">尚無申請紀錄</h3>
+        <h3 className="text-lg font-semibold">{t("applications:page.noApplications")}</h3>
         <p className="text-muted-foreground">
-          點擊「申請資源」按鈕來提交您的第一個虛擬機申請
+          {t("applications:page.noApplicationsDescription")}
         </p>
       </div>
     )
   }
 
-  return <DataTable columns={myRequestColumns} data={data.data} />
+  return <DataTable columns={columns} data={data.data} />
 }
 
 function RequestsTable() {
@@ -56,13 +60,15 @@ function RequestsTable() {
 }
 
 function Applications() {
+  const { t } = useTranslation(["applications"])
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">我的申請</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("applications:page.title")}</h1>
           <p className="text-muted-foreground">
-            查看您的虛擬機/容器申請紀錄與審核狀態
+            {t("applications:page.description")}
           </p>
         </div>
         <CreateVMRequest />

@@ -1,0 +1,70 @@
+{
+  "page": {
+    "title": "使用者設定",
+    "description": "管理您的帳戶設定和偏好"
+  },
+  "tabs": {
+    "myProfile": "我的個人資料",
+    "password": "密碼",
+    "dangerZone": "危險區域"
+  },
+  "profile": {
+    "title": "使用者資訊",
+    "fullName": "全名",
+    "email": "電子郵件",
+    "edit": "編輯",
+    "save": "儲存",
+    "cancel": "取消",
+    "na": "N/A"
+  },
+  "password": {
+    "title": "變更密碼",
+    "currentPassword": "目前密碼",
+    "newPassword": "新密碼",
+    "confirmPassword": "確認密碼",
+    "updateButton": "更新密碼"
+  },
+  "dangerZone": {
+    "title": "刪除帳戶",
+    "description": "永久刪除您的帳戶和所有相關資料。"
+  },
+  "table": {
+    "fullName": "全名",
+    "email": "電子郵件",
+    "role": "角色",
+    "status": "狀態",
+    "actions": "操作",
+    "you": "您",
+    "superuser": "管理員",
+    "user": "使用者",
+    "active": "啟用",
+    "inactive": "停用"
+  },
+  "admin": {
+    "addUser": {
+      "title": "新增使用者",
+      "description": "填寫下方表單以新增使用者到系統。",
+      "button": "新增使用者"
+    },
+    "editUser": {
+      "title": "編輯使用者",
+      "description": "更新下方使用者資訊。",
+      "button": "編輯使用者"
+    },
+    "userForm": {
+      "email": "電子郵件",
+      "fullName": "全名",
+      "setPassword": "設定密碼",
+      "confirmPassword": "確認密碼",
+      "isSuperuser": "是否為管理員？",
+      "isActive": "是否啟用？"
+    }
+  },
+  "appearance": {
+    "title": "外觀",
+    "toggleTheme": "切換主題",
+    "light": "淺色",
+    "dark": "深色",
+    "system": "系統"
+  }
+}

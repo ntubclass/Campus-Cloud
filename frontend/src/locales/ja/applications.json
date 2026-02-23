@@ -1,0 +1,66 @@
+{
+  "page": {
+    "title": "申請一覧",
+    "description": "VM/コンテナ申請記録と承認状況を表示",
+    "noApplications": "申請記録がありません",
+    "noApplicationsDescription": "「リソース申請」ボタンをクリックして最初の仮想マシン申請を送信してください"
+  },
+  "create": {
+    "title": "リソース申請",
+    "heading": "仮想マシン / コンテナ申請",
+    "description": "申請フォームに記入してください。送信後、管理者の承認を待ってリソースが自動的に作成されます",
+    "quickTemplate": "クイックテンプレート",
+    "customSpec": "カスタム仕様",
+    "submitButton": "申請を送信"
+  },
+  "form": {
+    "reason": "申請理由",
+    "reasonPlaceholder": "申請の目的を説明してください..."
+  },
+  "table": {
+    "hostname": "ホスト名",
+    "type": "タイプ",
+    "reason": "申請理由",
+    "specs": "仕様",
+    "status": "ステータス",
+    "vmid": "VMID",
+    "applicant": "申請者",
+    "applicationTime": "申請時刻",
+    "actions": "操作"
+  },
+  "status": {
+    "pending": "審査待ち",
+    "approved": "承認済み",
+    "rejected": "拒否",
+    "vmid": "VMID: {{id}}"
+  },
+  "specs": {
+    "cpu": "{{count}}コア",
+    "cpu_plural": "{{count}}コア",
+    "ram": "{{size}} RAM",
+    "disk": "{{size}} ディスク"
+  },
+  "types": {
+    "lxc": "LXCコンテナ",
+    "qemu": "QEMU仮想マシン"
+  },
+  "templates": {
+    "backToList": "リストに戻る",
+    "supportsUpdate": "更新サポート",
+    "description": "説明",
+    "noDescription": "説明なし",
+    "categories": "カテゴリ",
+    "webInterface": "Webインターフェース",
+    "defaultUsername": "デフォルトユーザー名",
+    "defaultPassword": "デフォルトパスワード",
+    "defaultInstallScript": "デフォルトインストールスクリプト",
+    "installScript": "インストールスクリプト",
+    "defaultResources": "デフォルトリソース構成",
+    "officialWebsite": "公式ウェブサイト",
+    "documentation": "ドキュメント",
+    "searchPlaceholder": "テンプレート名または説明を検索",
+    "allCategories": "すべてのカテゴリ",
+    "noTemplatesFound": "検索条件に一致するテンプレートが見つかりません",
+    "port": "Port {{port}}"
+  }
+}

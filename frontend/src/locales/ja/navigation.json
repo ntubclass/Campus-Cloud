@@ -1,0 +1,26 @@
+{
+  "sidebar": {
+    "dashboard": "ダッシュボード",
+    "myResources": "マイリソース",
+    "applications": "申請一覧",
+    "resources": "リソース管理",
+    "approvals": "承認管理",
+    "admin": "管理者",
+    "settings": "設定",
+    "language": "言語",
+    "appearance": "外観"
+  },
+  "pageTitle": {
+    "dashboard": "ダッシュボード - Campus Cloud",
+    "myResources": "マイリソース - Campus Cloud",
+    "applications": "申請一覧 - Campus Cloud",
+    "resources": "仮想マシン - Campus Cloud",
+    "approvals": "承認管理 - Campus Cloud",
+    "admin": "管理者 - Campus Cloud",
+    "settings": "設定 - Campus Cloud"
+  },
+  "dashboard": {
+    "welcome": "こんにちは、{{name}} 👋",
+    "description": "おかえりなさい！またお会いできて嬉しいです！"
+  }
+}
