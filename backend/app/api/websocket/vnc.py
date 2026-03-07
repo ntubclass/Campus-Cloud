@@ -7,16 +7,26 @@ import httpx
 import websockets
 from fastapi import WebSocket, WebSocketDisconnect
 
+from app.api.deps.auth import get_ws_current_user
+from app.api.deps.proxmox import check_resource_ownership
 from app.core.config import settings
 from app.core.proxmox import get_proxmox_api
 
 logger = logging.getLogger(__name__)
 
 
-async def vnc_proxy(websocket: WebSocket, vmid: int):
+async def vnc_proxy(websocket: WebSocket, vmid: int, token: str):
     """WebSocket proxy for VM VNC console access."""
+    # Authenticate user and check ownership before accepting
+    user, session = await get_ws_current_user(websocket, token=token)
+    try:
+        check_resource_ownership(vmid, user, session)
+    except Exception:
+        await websocket.close(code=1008, reason="Permission denied")
+        return
+
     await websocket.accept()
-    logger.info(f"VNC proxy connection request for VM {vmid}")
+    logger.info(f"VNC proxy connection for VM {vmid} by user {user.email}")
 
     pve_websocket = None
 
