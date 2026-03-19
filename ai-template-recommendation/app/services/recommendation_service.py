@@ -93,7 +93,7 @@ async def generate_ai_plan(
                 "cpu": "integer",
                 "memory_mb": "integer",
                 "disk_gb": "integer",
-                "gpu": "integer(0|1)",
+                "gpu": "integer (0 or more)",
                 "assigned_node": "node-name-or-null",
                 "why": "Traditional Chinese reason",
             }
