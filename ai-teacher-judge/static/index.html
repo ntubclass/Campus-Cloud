@@ -776,8 +776,6 @@
         typingIndicator.style.display = "block";
         btnSend.disabled = true;
 
-        freezeOldCard();
-
         try {
           const rubricContext = JSON.stringify({
             items: currentRubricItems,
@@ -804,6 +802,9 @@
           // ── 同步更新評分表 ──
           const updatedItems = data.updated_items;
           if (Array.isArray(updatedItems) && updatedItems.length > 0) {
+            // ✅ 表單有變更 → 凍結舊卡片 + 更新狀態 + 渲染新卡片
+            freezeOldCard();
+            
             // 更新前端狀態（後續聊天 & Excel 下載都用這份）
             currentRubricItems = updatedItems;
 
@@ -829,20 +830,9 @@
             currentEditableCardDiv = renderMessage("assistant", renderRubricCard(updatedAnalysis, "🔄 評分表已更新", true));
 
           } else {
-            // 純問答，只顯示文字回覆
+            // ✅ 純聊天（表單沒變）→ 只顯示文字回覆，保持原卡片可編輯
             if (reply) renderMessage("assistant", escapeHtml(reply));
-            
-            // 將原本被 freeze 的表單重新渲染為可編輯（因為我們沒有更新最新版本，所以仍然使用原本的）
-            const stats = calculateRubricStats(currentRubricItems);
-            const refAnalysis = {
-              items: currentRubricItems,
-              total_score: stats.totalScore,
-              auto_count: stats.autoCount,
-              partial_count: stats.partialCount,
-              manual_count: stats.manualCount,
-              summary: currentRubricSummary,
-            };
-            currentEditableCardDiv = renderMessage("assistant", renderRubricCard(refAnalysis, "📋 評分表目前狀態", true));
+            // 不凍結、不重新渲染卡片，讓使用者可以繼續編輯原本的表單
           }
 
           conversationHistory.push({ role: "assistant", content: reply });
