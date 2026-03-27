@@ -3,8 +3,11 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+from app.ai.template_recommendation.config import settings
 
 
 IGNORED_FILES = {"metadata.json", "versions.json", "github-versions.json"}
@@ -60,6 +63,11 @@ def load_catalog(json_dir: Path) -> TemplateCatalog:
             )
         )
     return TemplateCatalog(items=items, categories=categories)
+
+
+@lru_cache(maxsize=1)
+def get_catalog() -> TemplateCatalog:
+    return load_catalog(settings.resolved_templates_dir)
 
 
 def serialize_template(item: TemplateItem) -> dict[str, Any]:
