@@ -362,6 +362,22 @@ IMPORTANT RULES - 意圖識別（極為重要）
 ## 輸出結構約束
 - 每個 item 需有：id, title, description, max_score, detectable, detection_method, fallback。
 - 若修改表單（updated_items 不為 null），必須包含「完整列表」，未被要求變更的項目必須原樣保留，不得省略。
+
+## ⚠️ 極為重要：完整列表規則
+當你需要修改評分表時（updated_items 不為 null）：
+1. **必須返回完整的 {rubric_item_count} 個項目**，一個都不能少
+2. 只修改老師要求變更的項目，其他項目完全照抄原本的資料
+3. 即使老師只說「把第 3 項改成自動偵測」，你也要返回所有 {rubric_item_count} 個項目
+4. 如果老師要求刪除項目，返回的項目數會減少，這是唯一允許項目數變少的情況
+5. 如果老師要求新增項目，返回的項目數會增加
+
+**錯誤範例**（絕對不可以這樣做）：
+- 老師說「把第 3 項配分改成 10」→ 你只返回第 3 項 ❌
+- 老師說「新增一個檢查 Port 80 的項目」→ 你只返回新增的項目 ❌
+
+**正確範例**：
+- 老師說「把第 3 項配分改成 10」→ 你返回全部項目，只有第 3 項的 max_score 改成 10 ✅
+- 老師說「新增一個檢查 Port 80 的項目」→ 你返回原本所有項目 + 新增的項目 ✅
 """.strip()
 
 
@@ -468,6 +484,25 @@ async def chat_with_rubric(
         raw_updated = parsed.get("updated_items")
         normalized_updated = _normalize_rubric_items(raw_updated)
         if normalized_updated:
+            # ⚠️ 安全檢查：防止 AI 返回不完整的列表
+            # 檢查 AI 返回的項目數量是否異常減少
+            if context_item_count > 0:
+                updated_count = len(normalized_updated)
+                # 如果項目數減少超過 1 個，且不是精煉模式（精煉模式不應該刪除項目）
+                if updated_count < context_item_count - 1:
+                    import logging
+                    logger = logging.getLogger("rubric_service")
+                    logger.warning(
+                        f"⚠️ AI 返回的項目數異常：期望至少 {context_item_count - 1} 個，"
+                        f"實際返回 {updated_count} 個。可能導致資料遺失。"
+                    )
+                    # 在回覆中加入警告訊息
+                    reply_text = (
+                        f"⚠️ 系統偵測到異常：我只返回了 {updated_count} 個項目，"
+                        f"但原本有 {context_item_count} 個。這可能是我理解錯誤了。\n\n"
+                        f"為了安全起見，請確認這是否是你想要的結果。如果不是，請重新說明你的需求。\n\n"
+                        f"原始回覆：{reply_text}"
+                    )
             updated_items = [item.model_dump() for item in normalized_updated]
     except (json.JSONDecodeError, TypeError):
         pass  # AI 未輸出合法 JSON，直接用原始內容作為回覆

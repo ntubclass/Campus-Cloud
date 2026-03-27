@@ -802,6 +802,32 @@
           // ── 同步更新評分表 ──
           const updatedItems = data.updated_items;
           if (Array.isArray(updatedItems) && updatedItems.length > 0) {
+            // ⚠️ 安全檢查：防止 AI 返回不完整的列表導致資料遺失
+            const originalCount = currentRubricItems.length;
+            const updatedCount = updatedItems.length;
+            
+            // 如果 AI 返回的項目數量少於原本的數量，且不是明確的刪除操作，則發出警告
+            if (updatedCount < originalCount) {
+              const userMessage = conversationHistory[conversationHistory.length - 1]?.content || "";
+              const isDeleteIntent = /刪除|移除|去掉|砍掉|拿掉/i.test(userMessage);
+              
+              if (!isDeleteIntent) {
+                // 非刪除意圖但項目減少了 → 可能是 AI 錯誤
+                const confirmed = confirm(
+                  `⚠️ 安全警告\n\n` +
+                  `原本有 ${originalCount} 個評分項目，但 AI 只返回了 ${updatedCount} 個項目。\n` +
+                  `這可能導致 ${originalCount - updatedCount} 個項目遺失。\n\n` +
+                  `是否要繼續套用 AI 的修改？\n` +
+                  `（建議：取消後重新詢問 AI，或手動檢查）`
+                );
+                
+                if (!confirmed) {
+                  renderMessage("assistant", "⚠️ 已取消套用修改，評分表維持原樣。你可以重新詢問 AI，或手動編輯表單。");
+                  return; // 不更新資料
+                }
+              }
+            }
+            
             // ✅ 表單有變更 → 凍結舊卡片 + 更新狀態 + 渲染新卡片
             freezeOldCard();
             
