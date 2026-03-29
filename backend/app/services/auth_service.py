@@ -52,7 +52,7 @@ def google_login(*, session: Session, id_token: str) -> Token:
         raise BadRequestError("Could not retrieve email from Google token")
     user = user_repo.get_user_by_email(session=session, email=email)
     if not user:
-        raise NotFoundError("No account found for this Google account. Please contact your administrator.")
+        raise BadRequestError("Invalid Google token")
     if not user.is_active:
         raise BadRequestError("Inactive user")
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
