@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import sysconfig
@@ -27,7 +28,7 @@ from config.multi_model import (
     validate_cluster_resources,
 )
 from config.settings import get_settings
-from core.cluster import MultiModelEngineManager, StartupMode
+from core.cluster import MultiModelEngineManager
 from utils.health_utils import check_system_health
 from utils.logging_utils import get_logger
 
@@ -48,6 +49,10 @@ class ClusterRuntime:
 
     manager: MultiModelEngineManager
     gateway: GatewayRuntime | None = None
+
+
+# 全局 shutdown 標記
+_shutdown_requested = False
 
 
 def _resolve_python_bin(project_root: Path) -> str:
@@ -160,10 +165,9 @@ def _stop_gateway_process(runtime: GatewayRuntime | None, logger) -> None:
 
 
 def pre_launch_check(settings=None, logger_name: str = "PreCheck") -> bool:
-    """啟動前檢查"""
+    """啟動前檢查（增強版）"""
     logger = get_logger(logger_name)
     settings = settings or get_settings()
-    settings.inject_env_vars()
     
     logger.section("啟動前檢查")
 
@@ -205,20 +209,13 @@ def pre_launch_check(settings=None, logger_name: str = "PreCheck") -> bool:
     else:
         logger.success(f"系統記憶體充足: {health.memory_available_gb:.1f} GB 可用")
     
-    # 檢查模型路徑
-    model_path = Path(settings.resolved_model_path)
-    if model_path.exists():
-        logger.success(f"模型已存在: {model_path}")
-    else:
-        if "/" in settings.model_name:
-            logger.warning(f"模型不存在，將從 HuggingFace 下載: {settings.model_name}")
-            if settings.hf_hub_offline == 1:
-                logger.error("模型不存在且 HF_HUB_OFFLINE=1，無法下載")
-                logger.info("解決方案: 設置 HF_HUB_OFFLINE=0 或手動下載模型")
-                return False
-        else:
-            logger.error(f"模型路徑不存在: {settings.model_name}")
-            return False
+    # 檢查模型完整性
+    if not validate_model_integrity(settings, logger):
+        return False
+    
+    # 檢查端口可用性
+    if not check_port_available(settings.api_port, logger):
+        return False
     
     # 檢查 CUDA 環境
     triton_ptxas = Path(settings.triton_ptxas_path)
@@ -258,8 +255,112 @@ def check_dependency_compatibility(logger) -> bool:
         )
         logger.info("請執行: .venv/bin/pip install \"huggingface-hub>=0.34.0,<1.0\"")
         return False
-
+    
     return True
+
+
+def validate_model_integrity(settings, logger) -> bool:
+    """驗證模型完整性和必要檔案。"""
+    model_path = Path(settings.resolved_model_path)
+    
+    if not model_path.exists():
+        if "/" in settings.model_name:
+            # 將從 HuggingFace 下載
+            logger.warning(f"模型將從 HuggingFace 下載: {settings.model_name}")
+            
+            if settings.hf_hub_offline == 1:
+                logger.error("模型不存在且 HF_HUB_OFFLINE=1，無法下載")
+                logger.info("解決方案: 設置 HF_HUB_OFFLINE=0 或手動下載模型")
+                return False
+            
+            logger.info("首次啟動將自動下載模型，請耐心等待...")
+            return True
+        else:
+            logger.error(f"模型路徑不存在: {settings.model_name}")
+            return False
+    
+    # 模型已存在，檢查完整性
+    logger.success(f"模型已存在: {model_path}")
+    
+    # 檢查 config.json
+    config_file = model_path / "config.json"
+    if not config_file.exists():
+        logger.error(f"模型配置檔缺失: config.json")
+        logger.info(f"請檢查模型目錄: {model_path}")
+        return False
+    
+    logger.success("✓ config.json 存在")
+    
+    # 檢查權重檔案
+    has_safetensors = list(model_path.glob("*.safetensors"))
+    has_pytorch = list(model_path.glob("*.bin"))
+    has_gguf = list(model_path.glob("*.gguf"))
+    
+    if has_safetensors:
+        logger.success(f"✓ 找到 {len(has_safetensors)} 個 SafeTensors 權重檔")
+    elif has_pytorch:
+        logger.success(f"✓ 找到 {len(has_pytorch)} 個 PyTorch 權重檔")
+    elif has_gguf:
+        logger.success(f"✓ 找到 {len(has_gguf)} 個 GGUF 權重檔")
+    else:
+        logger.error("未找到模型權重檔案 (*.safetensors, *.bin, 或 *.gguf)")
+        logger.info(f"請檢查模型目錄: {model_path}")
+        return False
+    
+    # 檢查 tokenizer 檔案
+    tokenizer_files = [
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "special_tokens_map.json"
+    ]
+    
+    missing_tokenizer = []
+    for tf in tokenizer_files:
+        if not (model_path / tf).exists():
+            missing_tokenizer.append(tf)
+    
+    if missing_tokenizer:
+        logger.warning(f"部分 tokenizer 檔案缺失: {', '.join(missing_tokenizer)}")
+        logger.info("模型可能仍可正常運行，但建議檢查完整性")
+    else:
+        logger.success("✓ Tokenizer 檔案完整")
+    
+    return True
+
+
+def check_port_available(port: int, logger) -> bool:
+    """檢查端口是否可用。"""
+    import socket
+    
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)
+    
+    try:
+        # 嘗試綁定端口
+        sock.bind(("0.0.0.0", port))
+        sock.close()
+        logger.success(f"✓ 端口 {port} 可用")
+        return True
+    except OSError as e:
+        sock.close()
+        logger.error(f"端口 {port} 不可用: {e}")
+        
+        # 嘗試找出佔用進程（Linux）
+        try:
+            result = subprocess.run(
+                ["lsof", "-i", f":{port}"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.stdout:
+                logger.info(f"佔用端口的進程:\n{result.stdout}")
+            else:
+                logger.info(f"提示: 使用 'lsof -i :{port}' 或 'netstat -tunlp | grep {port}' 檢查佔用進程")
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            logger.info(f"提示: 使用 'netstat -tunlp | grep {port}' 檢查佔用進程")
+        
+        return False
 
 
 def check_runtime_cache_permissions(logger) -> bool:
@@ -322,7 +423,6 @@ def quick_start_cluster(
     base_env: str = ".env",
     gateway_env: str = ".env.gateway",
     skip_check: bool = False,
-    startup_mode: StartupMode = StartupMode.SEQUENTIAL,
     startup_delay: float = 5.0,
     start_gateway: bool = True,
     gateway_ready_timeout: int = 60,
@@ -335,7 +435,6 @@ def quick_start_cluster(
         base_env: 基礎設定檔路徑
         gateway_env: Gateway 設定檔路徑
         skip_check: 跳過預啟動檢查
-        startup_mode: 啟動模式（SEQUENTIAL=串行, PARALLEL=並行）
         startup_delay: 串行模式下每個模型完成後的額外等待秒數
         start_gateway: 是否啟動 Gateway
         gateway_ready_timeout: Gateway 健康檢查超時秒數
@@ -373,7 +472,6 @@ def quick_start_cluster(
         manager.start_all(
             wait_ready=wait_ready,
             timeout=timeout,
-            mode=startup_mode,
             startup_delay=startup_delay,
         )
         manager.print_status()
@@ -452,11 +550,6 @@ def main() -> None:
         help="Gateway 設定檔路徑（預設 .env.gateway）"
     )
     parser.add_argument(
-        "--parallel",
-        action="store_true",
-        help="使用並行啟動模式（不建議，較不穩定）。預設為串行模式：每個模型完全就緒後才啟動下一個"
-    )
-    parser.add_argument(
         "--startup-delay",
         type=float,
         default=5.0,
@@ -481,9 +574,7 @@ def main() -> None:
     logger.info(f"共用設定檔: {args.base_env}")
     logger.info(f"Gateway 設定檔: {args.gateway_env}")
     logger.info(f"啟動 Gateway: {'否' if args.no_gateway else '是'}")
-    
-    startup_mode = StartupMode.PARALLEL if args.parallel else StartupMode.SEQUENTIAL
-    logger.info(f"啟動模式: {startup_mode.value}")
+    logger.info("啟動模式: 串行模式（已移除並行模式）")
 
     try:
         runtime = quick_start_cluster(
@@ -492,7 +583,6 @@ def main() -> None:
             base_env=args.base_env,
             gateway_env=args.gateway_env,
             skip_check=args.skip_check,
-            startup_mode=startup_mode,
             startup_delay=args.startup_delay,
             start_gateway=not args.no_gateway,
             gateway_ready_timeout=args.gateway_ready_timeout,
@@ -504,14 +594,26 @@ def main() -> None:
     if runtime is None:
         sys.exit(1)
     
+    # 設定信號處理器以支援優雅關閉
+    def signal_handler(signum, frame):
+        global _shutdown_requested
+        sig_name = signal.Signals(signum).name
+        logger.info(f"收到 {sig_name} 信號，正在優雅關閉...")
+        _shutdown_requested = True
+    
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
     try:
-        while True:
+        while not _shutdown_requested:
             time.sleep(2)
     except KeyboardInterrupt:
         logger.info("收到中斷信號，正在停止集群與 Gateway...")
     finally:
+        logger.info("清理資源中...")
         _stop_gateway_process(runtime.gateway, logger)
         runtime.manager.stop_all()
+        logger.info("所有服務已停止")
 
 
 if __name__ == "__main__":

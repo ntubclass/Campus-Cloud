@@ -4,8 +4,10 @@ FastAPI Web 服務 - 提供 React UI 和 API 代理
 
 from __future__ import annotations
 
+import aiofiles
 import asyncio
 import base64
+import io
 import json
 import logging
 import os
@@ -22,6 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from PIL import Image
 
 # 導入專案的 API 客戶端
 import sys
@@ -74,6 +77,92 @@ gateway_http_client = httpx.AsyncClient(
     limits=httpx.Limits(max_connections=200, max_keepalive_connections=50, keepalive_expiry=30.0),
 )
 gateway_semaphore = asyncio.Semaphore(gateway_max_inflight)
+
+# 模型列表快取（60秒有效期）
+_models_cache: dict | None = None
+_models_cache_time: float = 0
+_MODELS_CACHE_TTL = 60.0  # 秒
+
+# ============================================================
+# 檔案驗證常數與輔助函數
+# ============================================================
+
+# 檔案大小限制 (50MB)
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB in bytes
+
+# 允許的檔案副檔名
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
+ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".webm", ".mkv", ".avi", ".mov"}
+ALLOWED_DOCUMENT_EXTENSIONS = {".pdf", ".docx", ".txt"}
+
+
+async def validate_file_size(file: UploadFile, max_size: int = MAX_FILE_SIZE) -> None:
+    """驗證上傳檔案大小"""
+    # 讀取檔案以檢查大小
+    content = await file.read()
+    await file.seek(0)  # 重置檔案指標以供後續使用
+    
+    if len(content) > max_size:
+        size_mb = len(content) / (1024 * 1024)
+        max_mb = max_size / (1024 * 1024)
+        raise HTTPException(
+            status_code=413,
+            detail=f"檔案過大 ({size_mb:.1f}MB)，最大允許 {max_mb:.0f}MB"
+        )
+
+
+def validate_file_extension(filename: str | None, allowed_extensions: set[str]) -> str:
+    """驗證檔案副檔名並返回"""
+    if not filename:
+        raise HTTPException(status_code=400, detail="缺少檔案名稱")
+    
+    suffix = Path(filename).suffix.lower()
+    if not suffix or suffix not in allowed_extensions:
+        allowed = ", ".join(sorted(allowed_extensions))
+        raise HTTPException(
+            status_code=400,
+            detail=f"不支援的檔案格式 '{suffix}'，允許的格式: {allowed}"
+        )
+    return suffix
+
+
+async def validate_image_content(file_bytes: bytes) -> None:
+    """驗證圖片內容（使用 Pillow 驗證真實格式）"""
+    try:
+        img = Image.open(io.BytesIO(file_bytes))
+        img.verify()  # 驗證圖片完整性
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"無效的圖片檔案: {str(e)}"
+        )
+
+
+def safe_remove_temp_file(path: str | None) -> None:
+    """安全地刪除臨時檔案，記錄錯誤但不拋出異常"""
+    if path and os.path.exists(path):
+        try:
+            os.remove(path)
+            logger.debug(f"已刪除臨時檔案: {path}")
+        except OSError as e:
+            logger.error(f"無法刪除臨時檔案 {path}: {e}")
+
+
+async def write_upload_to_temp_async(upload_file: UploadFile, suffix: str, prefix: str = "vllm_") -> str:
+    """非同步將上傳檔案寫入臨時檔案並返回路徑"""
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix, prefix=prefix)
+    os.close(tmp_fd)
+    
+    try:
+        async with aiofiles.open(tmp_path, "wb") as f:
+            # 分塊讀寫，避免大檔案佔用過多記憶體
+            while chunk := await upload_file.read(8192):  # 8KB chunks
+                await f.write(chunk)
+        return tmp_path
+    except Exception:
+        # 如果寫入失敗，清理臨時檔案
+        safe_remove_temp_file(tmp_path)
+        raise
 
 
 @app.on_event("shutdown")
@@ -271,9 +360,73 @@ async def health() -> dict:
     }
 
 
+@app.get("/ready")
+async def ready() -> JSONResponse:
+    """
+    就緒檢查 - 檢查所有後端模型是否正常運行
+    用於 Kubernetes readiness probe 或負載均衡器健康檢查
+    """
+    unhealthy_models = []
+    
+    for alias, route in gateway_routes.items():
+        health_url = f"{route.base_url.rsplit('/v1', 1)[0]}/health"
+        try:
+            # 嘗試連接到每個模型的健康檢查端點
+            # vLLM 通常在 /health 或 /v1/models 端點回應
+            resp = await gateway_http_client.get(health_url, timeout=2.0)
+            
+            if resp.status_code != 200:
+                unhealthy_models.append({
+                    "alias": alias,
+                    "reason": f"HTTP {resp.status_code}",
+                    "url": health_url
+                })
+        except httpx.TimeoutException:
+            unhealthy_models.append({
+                "alias": alias,
+                "reason": "timeout",
+                "url": health_url
+            })
+        except Exception as e:
+            unhealthy_models.append({
+                "alias": alias,
+                "reason": str(e),
+                "url": health_url
+            })
+    
+    if unhealthy_models:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "ready": False,
+                "unhealthy_models": unhealthy_models,
+                "healthy_count": len(gateway_routes) - len(unhealthy_models),
+                "total_count": len(gateway_routes)
+            }
+        )
+    
+    return JSONResponse(
+        status_code=200,
+        content={
+            "ready": True,
+            "healthy_count": len(gateway_routes),
+            "total_count": len(gateway_routes)
+        }
+    )
+
+
 @app.get("/v1/models")
 async def openai_list_models() -> dict:
-    """OpenAI Compatible: 列出可用模型 alias。"""
+    """OpenAI Compatible: 列出可用模型 alias（帶快取）。"""
+    global _models_cache, _models_cache_time
+    
+    current_time = time.time()
+    
+    # 檢查快取是否有效
+    if _models_cache is not None and (current_time - _models_cache_time) < _MODELS_CACHE_TTL:
+        return _models_cache
+    
+    # 重新建立模型列表
     data = [
         {
             "id": route.alias,
@@ -282,7 +435,13 @@ async def openai_list_models() -> dict:
         }
         for route in gateway_routes.values()
     ]
-    return {"object": "list", "data": data}
+    result = {"object": "list", "data": data}
+    
+    # 更新快取
+    _models_cache = result
+    _models_cache_time = current_time
+    
+    return result
 
 
 @app.post("/v1/chat/completions")
@@ -417,8 +576,17 @@ async def chat_vision(
         )
 
     try:
+        # 驗證檔案大小
+        await validate_file_size(image)
+        
+        # 驗證副檔名
+        validate_file_extension(image.filename, ALLOWED_IMAGE_EXTENSIONS)
+        
         # 讀取圖片
         image_bytes = await image.read()
+        
+        # 驗證圖片內容（magic bytes）
+        await validate_image_content(image_bytes)
         
         # 轉換為 Base64
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
@@ -469,8 +637,18 @@ async def chat_vision_stream(
 
     async def event_generator() -> AsyncGenerator[str, None]:
         try:
+            # 驗證檔案大小
+            await validate_file_size(image)
+            
+            # 驗證副檔名
+            validate_file_extension(image.filename, ALLOWED_IMAGE_EXTENSIONS)
+            
             # 讀取圖片
             image_bytes = await image.read()
+            
+            # 驗證圖片內容
+            await validate_image_content(image_bytes)
+            
             image_b64 = base64.b64encode(image_bytes).decode("utf-8")
             
             # 構建多模態內容
@@ -545,13 +723,19 @@ async def chat_document_stream(
     """
     async def event_generator() -> AsyncGenerator[str, None]:
         try:
+            # 驗證檔案大小
+            await validate_file_size(document)
+            
+            # 驗證副檔名
+            validate_file_extension(document.filename, ALLOWED_DOCUMENT_EXTENSIONS)
+            
             # 讀取文件
             document_bytes = await document.read()
             
             # 提取文件內容
             from utils.document_utils import extract_document, create_document_prompt
             
-            result = extract_document(document_bytes, filename=document.filename)
+            result = extract_document(document_bytes, filename=document.filename or "document.txt")
             
             if not result['success']:
                 logger.error("文件提取失敗: %s", result['error'])
@@ -656,12 +840,14 @@ async def chat_video_info(
 
     tmp_path = None
     try:
-        video_bytes = await video.read()
-        suffix = Path(video.filename or "video.mp4").suffix or ".mp4"
-        tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix, prefix="vllm_info_")
-        os.close(tmp_fd)
-        with open(tmp_path, "wb") as f:
-            f.write(video_bytes)
+        # 驗證檔案大小
+        await validate_file_size(video)
+        
+        # 驗證副檔名
+        suffix = validate_file_extension(video.filename, ALLOWED_VIDEO_EXTENSIONS)
+        
+        # 使用非同步 I/O 寫入臨時檔案
+        tmp_path = await write_upload_to_temp_async(video, suffix=suffix, prefix="vllm_info_")
 
         from utils.video_utils import get_video_info, plan_chunks
 
@@ -680,14 +866,13 @@ async def chat_video_info(
             "chunk_size": chunk_plan.chunk_size,
             "use_chunked": chunk_plan.use_chunked,
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.exception("影片解析失敗")
         raise HTTPException(status_code=422, detail=f"影片解析失敗: {str(e)}")
     finally:
-        if tmp_path:
-            try:
-                os.remove(tmp_path)
-            except OSError:
-                pass
+        safe_remove_temp_file(tmp_path)
 
 
 @app.post("/api/chat/video/stream")
@@ -708,13 +893,14 @@ async def chat_video_stream(
     async def event_generator() -> AsyncGenerator[str, None]:
         tmp_path = None
         try:
-            # 儲存上傳影片到 temp 目錄
-            video_bytes = await video.read()
-            suffix = Path(video.filename or "video.mp4").suffix or ".mp4"
-            tmp_fd, tmp_path = tempfile.mkstemp(suffix=suffix, prefix="vllm_video_")
-            os.close(tmp_fd)
-            with open(tmp_path, "wb") as f:
-                f.write(video_bytes)
+            # 驗證檔案大小
+            await validate_file_size(video)
+            
+            # 驗證副檔名
+            suffix = validate_file_extension(video.filename, ALLOWED_VIDEO_EXTENSIONS)
+            
+            # 使用非同步 I/O 寫入臨時檔案
+            tmp_path = await write_upload_to_temp_async(video, suffix=suffix, prefix="vllm_video_")
 
             # 影片預檢資訊
             from utils.video_utils import get_video_info, plan_chunks
@@ -766,11 +952,7 @@ async def chat_video_stream(
             logger.exception("影片處理失敗")
             yield 'data: [ERROR] 處理請求時發生內部錯誤\n\n'
         finally:
-            if tmp_path:
-                try:
-                    os.remove(tmp_path)
-                except OSError:
-                    pass
+            safe_remove_temp_file(tmp_path)
 
     return StreamingResponse(
         event_generator(),

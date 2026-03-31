@@ -4,17 +4,10 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from enum import Enum
 
 from config.multi_model import ModelInstanceConfig
 from core.engine import VLLMEngine
 from utils.logging_utils import get_logger
-
-
-class StartupMode(Enum):
-    """多模型啟動模式。"""
-    PARALLEL = "parallel"      # 並行啟動所有模型，再等待全部就緒（原有模式）
-    SEQUENTIAL = "sequential"  # 串行啟動：每個模型完全就緒後才啟動下一個（最穩定）
 
 
 @dataclass
@@ -27,7 +20,7 @@ class ManagedEngine:
 
 
 class MultiModelEngineManager:
-    """管理多個 vLLM 實例的生命週期。"""
+    """管理多個 vLLM 實例的生命週期（串行啟動模式）。"""
 
     def __init__(self, instances: list[ModelInstanceConfig]) -> None:
         self.instances = instances
@@ -38,16 +31,14 @@ class MultiModelEngineManager:
         self,
         wait_ready: bool = True,
         timeout: int = 1800,
-        mode: StartupMode = StartupMode.SEQUENTIAL,
         startup_delay: float = 5.0,
     ) -> None:
-        """啟動所有模型。
+        """啟動所有模型（串行模式）。
 
         Args:
             wait_ready: 是否等待模型就緒
             timeout: 單個模型等待就緒的超時秒數
-            mode: 啟動模式（SEQUENTIAL=串行, PARALLEL=並行）
-            startup_delay: 串行模式下每個模型完成後的額外等待秒數
+            startup_delay: 每個模型完成後的額外等待秒數
         """
         if not self.instances:
             raise ValueError("未提供任何模型實例設定")
@@ -55,12 +46,9 @@ class MultiModelEngineManager:
         total = len(self.instances)
         self.logger.section("集群部署進度")
         self.logger.info(f"目標模型數量: {total}")
-        self.logger.info(f"啟動模式: {mode.value}")
+        self.logger.info(f"啟動模式: SEQUENTIAL (串行)")
 
-        if mode == StartupMode.SEQUENTIAL:
-            self._start_sequential(wait_ready, timeout, startup_delay)
-        else:
-            self._start_parallel(wait_ready, timeout)
+        self._start_sequential(wait_ready, timeout, startup_delay)
 
     def _start_sequential(
         self, wait_ready: bool, timeout: int, startup_delay: float
@@ -77,7 +65,7 @@ class MultiModelEngineManager:
                 f"啟動 {alias}: {settings.model_name} ({settings.api_host}:{settings.api_port})"
             )
 
-            engine = VLLMEngine(settings=settings)
+            engine = VLLMEngine(settings=settings, alias=alias)
             try:
                 # 串行模式：啟動並等待此模型完全就緒
                 engine.start(wait_ready=wait_ready, timeout=timeout)
@@ -116,7 +104,7 @@ class MultiModelEngineManager:
             self.logger.info(
                 f"[{idx}/{total}] 啟動進程 {alias}: {settings.model_name} ({settings.api_host}:{settings.api_port})"
             )
-            engine = VLLMEngine(settings=settings)
+            engine = VLLMEngine(settings=settings, alias=alias)
             try:
                 engine.start(wait_ready=False, timeout=timeout)
                 self._engines[alias] = ManagedEngine(

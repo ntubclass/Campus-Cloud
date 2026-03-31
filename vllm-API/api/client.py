@@ -877,14 +877,17 @@ class ModelClient:
         import tempfile, os
         temp_files: list[str] = []
         summaries: list[str] = []
-        try:
-            for chunk in chunks:
-                tmp_fd, tmp_path = tempfile.mkstemp(suffix=".mp4", prefix="vllm_chunk_")
-                os.close(tmp_fd)
-                temp_files.append(tmp_path)
+        
+        async def process_chunk(chunk):
+            """處理單個影片區塊（非同步）"""
+            tmp_fd, tmp_path = tempfile.mkstemp(suffix=".mp4", prefix="vllm_chunk_")
+            os.close(tmp_fd)
+            temp_files.append(tmp_path)
+            
+            try:
                 # 寫 temp 影片檔（同步，用 executor 避免阻塞 loop）
                 await loop.run_in_executor(
-                    None, lambda p=tmp_path: write_frames_to_video(chunk.frames_b64, p, fps=_fps)
+                    None, lambda: write_frames_to_video(chunk.frames_b64, tmp_path, fps=_fps)
                 )
 
                 chunk_prompt = self._build_chunk_prompt(chunk, text)
@@ -900,8 +903,22 @@ class ModelClient:
                     **kwargs,
                 )
                 summary = resp.choices[0].message.content or ""
-                summaries.append(summary)
                 print(f"[Video] 第 {chunk.chunk_index} 段完成，摘要 {len(summary)} 字")
+                return chunk.chunk_index, summary
+            except Exception as e:
+                print(f"[Video] 第 {chunk.chunk_index} 段處理失敗: {e}")
+                return chunk.chunk_index, f"[處理失敗: {str(e)}]"
+        
+        try:
+            # 並行處理所有區塊
+            print(f"[Video] 並行處理 {plan.num_chunks} 個影片區塊...")
+            tasks = [process_chunk(chunk) for chunk in chunks]
+            results = await asyncio.gather(*tasks, return_exceptions=False)
+            
+            # 按照 chunk_index 排序結果
+            sorted_results = sorted(results, key=lambda x: x[0])
+            summaries = [summary for _, summary in sorted_results]
+            
         finally:
             for f in temp_files:
                 try:

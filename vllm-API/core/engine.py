@@ -11,6 +11,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import IO
 
 import httpx
 
@@ -20,9 +21,21 @@ from config.settings import Settings, get_settings
 class VLLMEngine:
     """vLLM 伺服器引擎管理器"""
 
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(self, settings: Settings | None = None, alias: str | None = None) -> None:
         self.settings = settings or get_settings()
+        self.alias = alias  # 用於識別日誌檔名
         self._process: subprocess.Popen | None = None
+        self._http_client: httpx.Client | None = None
+        self._log_handle: IO[str] | None = None  # 日誌檔案句柄
+
+    def _get_http_client(self) -> httpx.Client:
+        """取得或建立 HTTP 客戶端（連線池）"""
+        if self._http_client is None:
+            self._http_client = httpx.Client(
+                timeout=5.0,
+                limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
+            )
+        return self._http_client
 
     @property
     def base_url(self) -> str:
@@ -53,10 +66,26 @@ class VLLMEngine:
         # 明確傳遞環境變數到子進程
         env = os.environ.copy()
         
+        # 建立日誌目錄和日誌檔案
+        if self.alias:
+            logs_dir = Path(__file__).resolve().parent.parent / "logs"
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            # 將 alias 中的斜線替換為底線，避免被解釋為目錄分隔符
+            safe_alias = self.alias.replace("/", "_").replace("\\", "_")
+            log_file_path = logs_dir / f"{safe_alias}.log"
+            print(f"[Engine] 日誌檔案: {log_file_path}")
+            self._log_handle = open(log_file_path, "w", encoding="utf-8", buffering=1)
+            stdout_target = self._log_handle
+            stderr_target = self._log_handle
+        else:
+            # 若無 alias，使用預設行為（輸出到 sys.stdout/stderr）
+            stdout_target = sys.stdout
+            stderr_target = sys.stderr
+        
         self._process = subprocess.Popen(
             cmd,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
+            stdout=stdout_target,
+            stderr=stderr_target,
             env=env,
             # 讓 vLLM 子進程成為獨立 session，停止時可一次終止整個進程群組。
             start_new_session=(os.name != "nt"),
@@ -150,10 +179,11 @@ class VLLMEngine:
         if self._process is None or self._process.poll() is not None:
             return False
         try:
-            health_resp = httpx.get(self.health_url, timeout=timeout)
+            client = self._get_http_client()
+            health_resp = client.get(self.health_url, timeout=timeout)
             if health_resp.status_code != 200:
                 return False
-            models_resp = httpx.get(
+            models_resp = client.get(
                 self.models_url,
                 headers={"Authorization": f"Bearer {self.settings.api_key}"},
                 timeout=timeout,
@@ -164,6 +194,14 @@ class VLLMEngine:
 
     def stop(self) -> None:
         """停止 vLLM 伺服器（改進的進程管理）"""
+        # 關閉 HTTP 客戶端連線池
+        if self._http_client is not None:
+            try:
+                self._http_client.close()
+            except Exception:
+                pass
+            self._http_client = None
+        
         if self._process and self._process.poll() is None:
             print("[Engine] 正在停止 vLLM 伺服器...")
 
@@ -196,26 +234,35 @@ class VLLMEngine:
                     print("[Engine] 伺服器已強制停止")
                 except subprocess.TimeoutExpired:
                     print("[Engine] 警告: 無法停止進程，可能成為僵屍進程")
-            # 注意：stdout/stderr 指向 sys.stdout/sys.stderr，不需手動關閉
 
         else:
             print("[Engine] 伺服器未運行或已停止")
         
         self._process = None
+        
+        # 關閉日誌檔案句柄
+        if self._log_handle is not None:
+            try:
+                self._log_handle.close()
+            except Exception:
+                pass
+            self._log_handle = None
 
     def is_running(self) -> bool:
         """檢查伺服器是否運行中"""
         if self._process is None or self._process.poll() is not None:
             return False
         try:
-            resp = httpx.get(self.health_url, timeout=5)
+            client = self._get_http_client()
+            resp = client.get(self.health_url, timeout=5)
             return resp.status_code == 200
         except (httpx.ConnectError, httpx.ReadTimeout):
             return False
 
     def get_models(self) -> dict:
         """取得已載入的模型列表"""
-        resp = httpx.get(
+        client = self._get_http_client()
+        resp = client.get(
             self.models_url,
             headers={"Authorization": f"Bearer {self.settings.api_key}"},
             timeout=10,
