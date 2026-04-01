@@ -1,13 +1,27 @@
+import hashlib
+import json
 import logging
 import secrets
+import time
 import uuid
+from datetime import datetime, timedelta
+from typing import AsyncGenerator
 
+import httpx
 from sqlmodel import Session, select
 
 from app.ai_api.config import settings as ai_api_settings
 from app.core.security import decrypt_value, encrypt_value
 from app.exceptions import BadRequestError, NotFoundError, PermissionDeniedError
-from app.models import AIAPICredential, AIAPIRequest, AIAPIRequestStatus, get_datetime_utc
+from app.models import (
+    AIAPICredential,
+    AIAPIRateLimit,
+    AIAPIRequest,
+    AIAPIRequestStatus,
+    AIAPIUsage,
+    User,
+    get_datetime_utc,
+)
 from app.schemas import (
     AIAPICredentialPublic,
     AIAPICredentialsPublic,
@@ -164,6 +178,10 @@ def review_request(
         api_key = _generate_user_api_key()
         if not base_url:
             raise BadRequestError("AI API connection settings are incomplete")
+
+        # 计算 API key 的 hash 用于快速查询
+        api_key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+
         session.add(
             AIAPICredential(
                 user_id=db_request.user_id,
@@ -171,6 +189,7 @@ def review_request(
                 base_url=base_url,
                 api_key_encrypted=encrypt_value(api_key),
                 api_key_prefix=_credential_prefix(api_key),
+                api_key_hash=api_key_hash,
             )
         )
 
@@ -225,12 +244,15 @@ def rotate_credential(
     session.add(credential)
 
     new_api_key = _generate_user_api_key()
+    new_api_key_hash = hashlib.sha256(new_api_key.encode()).hexdigest()
+
     new_credential = AIAPICredential(
         user_id=credential.user_id,
         request_id=credential.request_id,
         base_url=credential.base_url,
         api_key_encrypted=encrypt_value(new_api_key),
         api_key_prefix=_credential_prefix(new_api_key),
+        api_key_hash=new_api_key_hash,
     )
     session.add(new_credential)
 
@@ -264,3 +286,431 @@ def delete_credential(
     )
     session.commit()
     return Message(message="AI API credential deleted successfully")
+
+
+# ===== 新增：速率限制功能 =====
+
+
+def check_rate_limit(
+    *, session: Session, user_id: uuid.UUID, limit_per_minute: int | None = None
+) -> tuple[bool, dict]:
+    """
+    检查用户是否超过速率限制
+
+    Args:
+        session: 数据库会话
+        user_id: 用户 ID
+        limit_per_minute: 每分钟限制次数（默认从配置读取）
+
+    Returns:
+        tuple[bool, dict]: (是否允许, 状态信息)
+    """
+    if limit_per_minute is None:
+        limit_per_minute = ai_api_settings.ai_api_rate_limit_per_minute
+
+    # 获取当前分钟的 key（格式: "2026-04-01-10-30"）
+    now = get_datetime_utc()
+    minute_key = now.strftime("%Y-%m-%d-%H-%M")
+
+    # 查询当前计数
+    record = session.exec(
+        select(AIAPIRateLimit)
+        .where(AIAPIRateLimit.user_id == user_id)
+        .where(AIAPIRateLimit.minute_key == minute_key)
+    ).first()
+
+    if not record:
+        # 第一次请求，创建记录
+        record = AIAPIRateLimit(
+            user_id=user_id, minute_key=minute_key, request_count=1
+        )
+        session.add(record)
+        session.commit()
+
+        return True, {
+            "limit": limit_per_minute,
+            "remaining": limit_per_minute - 1,
+            "reset_at": (now + timedelta(minutes=1)).replace(second=0, microsecond=0),
+        }
+
+    # 检查是否超限
+    if record.request_count >= limit_per_minute:
+        return False, {
+            "limit": limit_per_minute,
+            "remaining": 0,
+            "reset_at": (now + timedelta(minutes=1)).replace(second=0, microsecond=0),
+        }
+
+    # 递增计数
+    record.request_count += 1
+    record.updated_at = now
+    session.add(record)
+    session.commit()
+
+    return True, {
+        "limit": limit_per_minute,
+        "remaining": limit_per_minute - record.request_count,
+        "reset_at": (now + timedelta(minutes=1)).replace(second=0, microsecond=0),
+    }
+
+
+# ===== 新增：使用量记录功能 =====
+
+
+def record_usage(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    credential_id: uuid.UUID,
+    model_name: str,
+    request_type: str,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
+    total_tokens: int = 0,
+    request_duration_ms: int | None = None,
+    status: str = "success",
+    error_message: str | None = None,
+) -> None:
+    """
+    记录 AI API 使用量
+
+    Args:
+        session: 数据库会话
+        user_id: 用户 ID
+        credential_id: 凭证 ID
+        model_name: 模型名称
+        request_type: 请求类型（chat_completion, completion等）
+        prompt_tokens: 输入 tokens
+        completion_tokens: 输出 tokens
+        total_tokens: 总 tokens
+        request_duration_ms: 请求耗时（毫秒）
+        status: 状态（success, error）
+        error_message: 错误信息
+    """
+    usage = AIAPIUsage(
+        user_id=user_id,
+        credential_id=credential_id,
+        model_name=model_name,
+        request_type=request_type,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=total_tokens,
+        request_duration_ms=request_duration_ms,
+        status=status,
+        error_message=error_message,
+    )
+    session.add(usage)
+    session.commit()
+    logger.info(
+        "Recorded usage for user %s: model=%s, tokens=%d",
+        user_id,
+        model_name,
+        total_tokens,
+    )
+
+
+# ===== 新增：代理到 VLLM 功能 =====
+
+
+async def proxy_to_vllm_chat_completion(
+    *,
+    session: Session,
+    user: User,
+    credential: AIAPICredential,
+    request_data: dict,
+) -> dict:
+    """
+    代理聊天补全请求到 VLLM Gateway（非流式）
+
+    Args:
+        session: 数据库会话
+        user: 用户对象
+        credential: API 凭证对象
+        request_data: 请求数据（dict 格式）
+
+    Returns:
+        dict: VLLM 响应
+
+    Raises:
+        HTTPException: 代理失败时抛出异常
+    """
+    # 构建请求 URL
+    url = f"{ai_api_settings.resolved_vllm_base_url}/v1/chat/completions"
+
+    # 构建请求头（使用 VLLM 的 API Key）
+    headers = {
+        "Authorization": f"Bearer {ai_api_settings.ai_api_api_key}",
+        "Content-Type": "application/json",
+    }
+
+    # 记录开始时间
+    start_time = time.time()
+    model_name = request_data.get("model", "unknown")
+
+    try:
+        # 发送请求到 VLLM
+        async with httpx.AsyncClient(
+            timeout=ai_api_settings.ai_api_timeout
+        ) as client:
+            response = await client.post(url, json=request_data, headers=headers)
+            response.raise_for_status()
+            result = response.json()
+
+        # 提取 tokens
+        usage = result.get("usage", {})
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+        total_tokens = usage.get("total_tokens", 0)
+
+        # 记录使用量
+        duration_ms = int((time.time() - start_time) * 1000)
+        record_usage(
+            session=session,
+            user_id=user.id,
+            credential_id=credential.id,
+            model_name=model_name,
+            request_type="chat_completion",
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            request_duration_ms=duration_ms,
+            status="success",
+        )
+
+        logger.info(
+            "User %s completed chat request: model=%s, tokens=%d, duration=%dms",
+            user.email,
+            model_name,
+            total_tokens,
+            duration_ms,
+        )
+
+        return result
+
+    except httpx.HTTPStatusError as e:
+        # HTTP 错误（4xx, 5xx）
+        duration_ms = int((time.time() - start_time) * 1000)
+        error_msg = f"VLLM returned {e.response.status_code}: {e.response.text}"
+
+        record_usage(
+            session=session,
+            user_id=user.id,
+            credential_id=credential.id,
+            model_name=model_name,
+            request_type="chat_completion",
+            request_duration_ms=duration_ms,
+            status="error",
+            error_message=error_msg,
+        )
+
+        logger.error("VLLM request failed for user %s: %s", user.email, error_msg)
+        raise
+
+    except httpx.RequestError as e:
+        # 网络错误（连接失败、超时等）
+        duration_ms = int((time.time() - start_time) * 1000)
+        error_msg = f"Request error: {str(e)}"
+
+        record_usage(
+            session=session,
+            user_id=user.id,
+            credential_id=credential.id,
+            model_name=model_name,
+            request_type="chat_completion",
+            request_duration_ms=duration_ms,
+            status="error",
+            error_message=error_msg,
+        )
+
+        logger.error("VLLM connection failed for user %s: %s", user.email, error_msg)
+        raise
+
+    except Exception as e:
+        # 其他未知错误
+        duration_ms = int((time.time() - start_time) * 1000)
+        error_msg = f"Unexpected error: {str(e)}"
+
+        record_usage(
+            session=session,
+            user_id=user.id,
+            credential_id=credential.id,
+            model_name=model_name,
+            request_type="chat_completion",
+            request_duration_ms=duration_ms,
+            status="error",
+            error_message=error_msg,
+        )
+
+        logger.error("Unexpected error for user %s: %s", user.email, error_msg)
+        raise
+
+
+async def proxy_to_vllm_chat_completion_stream(
+    *,
+    session: Session,
+    user: User,
+    credential: AIAPICredential,
+    request_data: dict,
+) -> AsyncGenerator[str, None]:
+    """
+    代理聊天补全请求到 VLLM Gateway（流式）
+
+    Args:
+        session: 数据库会话
+        user: 用户对象
+        credential: API 凭证对象
+        request_data: 请求数据
+
+    Yields:
+        str: SSE 格式的数据块
+    """
+    # 确保开启流式
+    request_data["stream"] = True
+
+    url = f"{ai_api_settings.resolved_vllm_base_url}/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {ai_api_settings.ai_api_api_key}",
+        "Content-Type": "application/json",
+    }
+
+    start_time = time.time()
+    model_name = request_data.get("model", "unknown")
+    total_tokens_tracked = 0
+
+    try:
+        async with httpx.AsyncClient(
+            timeout=ai_api_settings.ai_api_timeout
+        ) as client:
+            async with client.stream(
+                "POST", url, json=request_data, headers=headers
+            ) as response:
+                response.raise_for_status()
+
+                async for line in response.aiter_lines():
+                    if not line.strip():
+                        continue
+
+                    # SSE 格式: "data: {...}"
+                    if line.startswith("data: "):
+                        data_str = line[6:]  # 去掉 "data: " 前缀
+
+                        if data_str == "[DONE]":
+                            # 流结束，记录使用量
+                            duration_ms = int((time.time() - start_time) * 1000)
+                            record_usage(
+                                session=session,
+                                user_id=user.id,
+                                credential_id=credential.id,
+                                model_name=model_name,
+                                request_type="chat_completion_stream",
+                                prompt_tokens=0,  # 流式响应通常无法准确统计
+                                completion_tokens=total_tokens_tracked,
+                                total_tokens=total_tokens_tracked,
+                                request_duration_ms=duration_ms,
+                                status="success",
+                            )
+
+                            logger.info(
+                                "User %s completed stream: model=%s, duration=%dms",
+                                user.email,
+                                model_name,
+                                duration_ms,
+                            )
+
+                            yield f"data: [DONE]\n\n"
+                            break
+
+                        try:
+                            # 尝试从 usage 字段提取 tokens（某些模型会在流式中提供）
+                            import json
+
+                            chunk = json.loads(data_str)
+                            if "usage" in chunk:
+                                total_tokens_tracked = chunk["usage"].get(
+                                    "total_tokens", 0
+                                )
+
+                            yield f"data: {data_str}\n\n"
+                        except json.JSONDecodeError:
+                            yield f"data: {data_str}\n\n"
+
+    except Exception as e:
+        # 记录错误
+        duration_ms = int((time.time() - start_time) * 1000)
+        record_usage(
+            session=session,
+            user_id=user.id,
+            credential_id=credential.id,
+            model_name=model_name,
+            request_type="chat_completion_stream",
+            request_duration_ms=duration_ms,
+            status="error",
+            error_message=str(e),
+        )
+
+        logger.error("Stream error for user %s: %s", user.email, str(e))
+        raise
+
+
+# ===== 新增：查询使用统计 =====
+
+
+def get_user_usage_stats(
+    *,
+    session: Session,
+    user_id: uuid.UUID,
+    start_date: datetime,
+    end_date: datetime,
+) -> dict:
+    """
+    查询用户的使用统计
+
+    Args:
+        session: 数据库会话
+        user_id: 用户 ID
+        start_date: 开始日期
+        end_date: 结束日期
+
+    Returns:
+        dict: 统计信息
+    """
+    # 查询指定时间范围内的所有使用记录
+    records = session.exec(
+        select(AIAPIUsage)
+        .where(AIAPIUsage.user_id == user_id)
+        .where(AIAPIUsage.created_at >= start_date)
+        .where(AIAPIUsage.created_at <= end_date)
+    ).all()
+
+    # 统计总数
+    total_requests = len(records)
+    total_tokens = sum(r.total_tokens for r in records)
+    total_prompt_tokens = sum(r.prompt_tokens for r in records)
+    total_completion_tokens = sum(r.completion_tokens for r in records)
+
+    # 按模型分组统计
+    by_model = {}
+    for record in records:
+        model = record.model_name
+        if model not in by_model:
+            by_model[model] = {
+                "requests": 0,
+                "tokens": 0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+            }
+
+        by_model[model]["requests"] += 1
+        by_model[model]["tokens"] += record.total_tokens
+        by_model[model]["prompt_tokens"] += record.prompt_tokens
+        by_model[model]["completion_tokens"] += record.completion_tokens
+
+    return {
+        "total_requests": total_requests,
+        "total_tokens": total_tokens,
+        "total_prompt_tokens": total_prompt_tokens,
+        "total_completion_tokens": total_completion_tokens,
+        "by_model": by_model,
+        "start_date": start_date,
+        "end_date": end_date,
+    }

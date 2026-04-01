@@ -18,6 +18,14 @@ from .ai_api import (
     AIAPIRequestReview,
     AIAPIRequestsPublic,
 )
+from .ai_proxy import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    ChatMessage,
+    ModelsResponse,
+    RateLimitStatusResponse,
+    UsageStatsResponse,
+)
 from .audit_log import AuditLogPublic, AuditLogsPublic
 from .common import Message, NewPassword, Token, TokenPayload
 from .resource import (
@@ -95,12 +103,20 @@ __all__ = [
     "Token",
     "TokenPayload",
     "NewPassword",
+    # AI API
     "AIAPIRequestCreate",
     "AIAPIRequestReview",
     "AIAPIRequestPublic",
     "AIAPIRequestsPublic",
     "AIAPICredentialPublic",
     "AIAPICredentialsPublic",
+    # AI Proxy
+    "ChatMessage",
+    "ChatCompletionRequest",
+    "ChatCompletionResponse",
+    "ModelsResponse",
+    "UsageStatsResponse",
+    "RateLimitStatusResponse",
     # User
     "UserCreate",
     "UserRegister",
