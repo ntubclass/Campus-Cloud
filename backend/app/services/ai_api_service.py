@@ -62,6 +62,7 @@ def _to_request_public(req: AIAPIRequest) -> AIAPIRequestPublic:
         user_email=req.user.email if req.user else None,
         user_full_name=req.user.full_name if req.user else None,
         purpose=req.purpose,
+        api_key_name=req.api_key_name,
         status=req.status,
         reviewer_id=req.reviewer_id,
         reviewer_email=req.reviewer.email if req.reviewer else None,
@@ -78,6 +79,7 @@ def _to_credential_public(credential: AIAPICredential) -> AIAPICredentialPublic:
         base_url=credential.base_url,
         api_key=decrypt_value(credential.api_key_encrypted),
         api_key_prefix=credential.api_key_prefix,
+        api_key_name=credential.api_key_name,
         expires_at=credential.expires_at,
         revoked_at=credential.revoked_at,
         created_at=credential.created_at,
@@ -87,7 +89,12 @@ def _to_credential_public(credential: AIAPICredential) -> AIAPICredentialPublic:
 def create_request(
     *, session: Session, request_in: AIAPIRequestCreate, user
 ) -> AIAPIRequestPublic:
-    db_request = AIAPIRequest(user_id=user.id, purpose=request_in.purpose.strip())
+    db_request = AIAPIRequest(
+        user_id=user.id,
+        purpose=request_in.purpose.strip(),
+        api_key_name=request_in.api_key_name.strip(),
+        duration=request_in.duration,
+    )
     session.add(db_request)
     audit_service.log_action(
         session=session,
@@ -178,6 +185,18 @@ def review_request(
         if not base_url:
             raise BadRequestError("AI API connection settings are incomplete")
 
+        expires_at = None
+        now = get_datetime_utc()
+        duration_str = db_request.duration
+        if duration_str == "1h":
+            expires_at = now + timedelta(hours=1)
+        elif duration_str == "1d":
+            expires_at = now + timedelta(days=1)
+        elif duration_str == "7d":
+            expires_at = now + timedelta(days=7)
+        elif duration_str == "30d":
+            expires_at = now + timedelta(days=30)
+            
         session.add(
             AIAPICredential(
                 user_id=db_request.user_id,
@@ -185,6 +204,8 @@ def review_request(
                 base_url=base_url,
                 api_key_encrypted=encrypt_value(api_key),
                 api_key_prefix=_credential_prefix(api_key),
+                api_key_name=db_request.api_key_name,
+                expires_at=expires_at,
             )
         )
 
@@ -246,6 +267,8 @@ def rotate_credential(
         base_url=credential.base_url,
         api_key_encrypted=encrypt_value(new_api_key),
         api_key_prefix=_credential_prefix(new_api_key),
+        api_key_name=credential.api_key_name,
+        expires_at=credential.expires_at,
     )
     session.add(new_credential)
 
@@ -280,6 +303,28 @@ def delete_credential(
     session.commit()
     return Message(message="AI API credential deleted successfully")
 
+
+def update_credential_name(
+    *, session: Session, credential_id: uuid.UUID, name: str, current_user
+) -> AIAPICredentialPublic:
+    credential = _get_owned_credential(
+        session=session, credential_id=credential_id, current_user=current_user
+    )
+
+    credential.api_key_name = name
+    session.add(credential)
+
+    audit_service.log_action(
+        session=session,
+        user_id=current_user.id,
+        action="ai_api_request_review",
+        details=f"Renamed AI API credential {credential_id} to '{name}'",
+        commit=False,
+    )
+
+    session.commit()
+    session.refresh(credential)
+    return _to_credential_public(credential)
 
 # ===== 新增：速率限制功能 =====
 

@@ -8,6 +8,8 @@ from app.models.ai_api_request import AIAPIRequestStatus
 
 class AIAPIRequestCreate(BaseModel):
     purpose: str = Field(min_length=10, max_length=2000)
+    api_key_name: str = Field(default="test", min_length=1, max_length=20)
+    duration: str = Field(default="never", max_length=20)
 
 
 class AIAPIRequestReview(BaseModel):
@@ -21,6 +23,7 @@ class AIAPIRequestPublic(BaseModel):
     user_email: str | None = None
     user_full_name: str | None = None
     purpose: str
+    api_key_name: str
     status: AIAPIRequestStatus
     reviewer_id: uuid.UUID | None = None
     reviewer_email: str | None = None
@@ -40,6 +43,7 @@ class AIAPICredentialPublic(BaseModel):
     base_url: str
     api_key: str
     api_key_prefix: str
+    api_key_name: str
     expires_at: datetime | None = None
     revoked_at: datetime | None = None
     created_at: datetime
@@ -48,3 +52,7 @@ class AIAPICredentialPublic(BaseModel):
 class AIAPICredentialsPublic(BaseModel):
     data: list[AIAPICredentialPublic]
     count: int
+
+
+class AIAPICredentialUpdate(BaseModel):
+    api_key_name: str = Field(min_length=1, max_length=20)

@@ -13,6 +13,7 @@ API 請求/回應 schemas，按領域分檔：
 from .ai_api import (
     AIAPICredentialPublic,
     AIAPICredentialsPublic,
+    AIAPICredentialUpdate,
     AIAPIRequestCreate,
     AIAPIRequestPublic,
     AIAPIRequestReview,
@@ -115,6 +116,7 @@ __all__ = [
     "AIAPIRequestsPublic",
     "AIAPICredentialPublic",
     "AIAPICredentialsPublic",
+    "AIAPICredentialUpdate",
     # AI Proxy
     "ChatMessage",
     "ChatCompletionRequest",

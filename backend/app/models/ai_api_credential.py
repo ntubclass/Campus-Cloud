@@ -21,6 +21,7 @@ class AIAPICredential(SQLModel, table=True):
     base_url: str = Field(max_length=2048)
     api_key_encrypted: str = Field(max_length=4096)
     api_key_prefix: str = Field(max_length=32)
+    api_key_name: str = Field(default="test", min_length=1, max_length=20)
     expires_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
     revoked_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
     created_at: datetime = Field(

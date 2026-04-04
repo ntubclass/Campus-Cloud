@@ -25,6 +25,8 @@ class AIAPIRequest(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.id")
     purpose: str = Field(max_length=2000)
+    api_key_name: str = Field(default="test", max_length=20)
+    duration: str = Field(default="never", max_length=20)
     status: AIAPIRequestStatus = Field(
         default=AIAPIRequestStatus.pending,
         sa_column=Column(

@@ -15,9 +15,9 @@ import httpx
 # ★ 填入你的設定
 # ─────────────────────────────────────────────
 BACKEND_URL = "http://localhost:8000/api/v1"
-API_KEY     = "ccai_kWT1E0LABAqPLA0SUJx__uguTSzgdsbY"          # ← 填入你的 ccai_xxx 金鑰
+API_KEY     = "ccai_nXbbbUqCqucKWXGBHtp0zuLH0rJ0ktuU"          # ← 填入你的 ccai_xxx 金鑰
 MODEL       = "gpt-oss-20B"               # ← 留空會自動抓第一個可用模型
-PROMPT      = "你是什麼模型"
+PROMPT      = "你是什麼模型 200字介紹下"
 # ─────────────────────────────────────────────
 
 
@@ -65,7 +65,7 @@ def chat(model: str):
                 "model": model,
                 "messages": [{"role": "user", "content": PROMPT}],
                 "stream": False,
-                "max_tokens": 512,
+                "max_tokens": 2048,
             },
             headers=header(),
         )
@@ -104,7 +104,7 @@ def chat_stream(model: str):
                 "model": model,
                 "messages": [{"role": "user", "content": PROMPT}],
                 "stream": True,
-                "max_tokens": 512,
+                "max_tokens": 2048,
             },
             headers=header(),
             timeout=120,
