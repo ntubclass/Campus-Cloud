@@ -83,6 +83,8 @@ def upsert_storages(session: Session, storages: list[dict]) -> list[ProxmoxStora
         if key not in incoming_keys:
             session.delete(s)
 
+    session.flush()   # push deletes before commit, consistent with proxmox_node.py
+
     session.commit()
     for s in result:
         session.refresh(s)
