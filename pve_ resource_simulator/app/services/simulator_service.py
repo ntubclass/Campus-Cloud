@@ -22,7 +22,6 @@ from app.schemas import (
     SimulationState,
     SimulationSummary,
     StorageInfo,
-    StorageSpeedTier,
     VMTemplate,
     VmStackItem,
 )
