@@ -144,6 +144,8 @@ def load_model_instances(
             "dtype": "DTYPE",
             "tensor_parallel_size": "TENSOR_PARALLEL_SIZE",
             "quantization": "QUANTIZATION",
+            "enable_auto_tool_choice": "ENABLE_AUTO_TOOL_CHOICE",
+            "tool_call_parser": "TOOL_CALL_PARSER",
         }
         
         for json_key, env_key in field_mapping.items():
