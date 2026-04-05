@@ -17,6 +17,8 @@ from app.repositories import proxmox_storage as proxmox_storage_repo
 from app.schemas.proxmox_config import (
     CertParseResult,
     ClusterPreviewResult,
+    ClusterStatsPublic,
+    NodeStatsPublic,
     ProxmoxConfigPublic,
     ProxmoxConfigUpdate,
     ProxmoxConnectionTestResult,
@@ -193,6 +195,9 @@ def update_proxmox_config(
         gateway_ip=config_in.gateway_ip,
         local_subnet=config_in.local_subnet,
         default_node=config_in.default_node,
+        placement_strategy=config_in.placement_strategy,
+        cpu_overcommit_ratio=config_in.cpu_overcommit_ratio,
+        disk_overcommit_ratio=config_in.disk_overcommit_ratio,
     )
 
     from app.core.proxmox import invalidate_proxmox_client
@@ -417,6 +422,11 @@ def sync_now(
             try:
                 raw_storages = client.nodes(node.name).storage.get()
                 for st in raw_storages:
+                    # PVE 端已禁用、或在此節點不可用（node-restricted）的 storage 不同步
+                    if not st.get("enabled", 1):
+                        continue
+                    if not st.get("active", 1):
+                        continue
                     content = st.get("content", "")
                     total = st.get("total", 0)
                     used = st.get("used", 0)
@@ -452,6 +462,61 @@ def sync_now(
     except Exception as e:
         logger.warning(f"sync-now failed: {e}")
         return SyncNowResult(success=False, nodes=[], storage_count=0, error="同步失敗，請確認連線設定")
+
+
+@router.get("/cluster-stats", response_model=ClusterStatsPublic)
+def get_cluster_stats(current_user: AdminUser) -> Any:
+    """取得各節點即時資源使用狀態與叢集加總"""
+    try:
+        from app.services import proxmox_service
+        raw_nodes = proxmox_service.list_nodes()
+        raw_resources = proxmox_service.list_all_resources()
+    except Exception as e:
+        logger.warning(f"cluster-stats failed: {e}")
+        raise HTTPException(status_code=503, detail="無法連線至 Proxmox，請確認連線設定")
+
+    # VM count per node (running + stopped, exclude templates)
+    vm_count_map: dict[str, int] = {}
+    for r in raw_resources:
+        if r.get("template") == 1:
+            continue
+        if str(r.get("type") or "") not in {"lxc", "qemu"}:
+            continue
+        node_name = str(r.get("node") or "")
+        vm_count_map[node_name] = vm_count_map.get(node_name, 0) + 1
+
+    node_stats: list[NodeStatsPublic] = []
+    for n in raw_nodes:
+        name = str(n.get("node") or n.get("name") or "unknown")
+        cpu_ratio = float(n.get("cpu") or 0)
+        maxcpu = int(n.get("maxcpu") or 0)
+        node_stats.append(NodeStatsPublic(
+            name=name,
+            status=str(n.get("status") or "unknown").lower(),
+            cpu_usage_pct=round(cpu_ratio * 100, 1),
+            cpu_cores=maxcpu,
+            mem_used_gb=round(int(n.get("mem") or 0) / 1024 ** 3, 2),
+            mem_total_gb=round(int(n.get("maxmem") or 0) / 1024 ** 3, 2),
+            disk_used_gb=round(int(n.get("disk") or 0) / 1024 ** 3, 2),
+            disk_total_gb=round(int(n.get("maxdisk") or 0) / 1024 ** 3, 2),
+            vm_count=vm_count_map.get(name, 0),
+        ))
+
+    online = [n for n in node_stats if n.status == "online"]
+    offline = [n for n in node_stats if n.status != "online"]
+
+    return ClusterStatsPublic(
+        nodes=node_stats,
+        total_cpu_cores=sum(n.cpu_cores for n in node_stats),
+        used_cpu_cores=round(sum(n.cpu_usage_pct * n.cpu_cores / 100 for n in node_stats), 2),
+        total_mem_gb=round(sum(n.mem_total_gb for n in node_stats), 2),
+        used_mem_gb=round(sum(n.mem_used_gb for n in node_stats), 2),
+        total_disk_gb=round(sum(n.disk_total_gb for n in node_stats), 2),
+        used_disk_gb=round(sum(n.disk_used_gb for n in node_stats), 2),
+        online_count=len(online),
+        offline_count=len(offline),
+        total_vm_count=sum(n.vm_count for n in node_stats),
+    )
 
 
 @router.post("/parse-cert", response_model=CertParseResult)

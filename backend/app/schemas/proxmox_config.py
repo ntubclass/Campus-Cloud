@@ -19,6 +19,9 @@ class ProxmoxConfigPublic(BaseModel):
     gateway_ip: str | None = None  # 可能尚未設定（舊資料相容）
     local_subnet: str | None = None
     default_node: str | None = None
+    placement_strategy: str = "dominant_share_min"
+    cpu_overcommit_ratio: float = 2.0
+    disk_overcommit_ratio: float = 1.0
     updated_at: datetime | None = None
     is_configured: bool
     has_ca_cert: bool
@@ -41,6 +44,9 @@ class ProxmoxConfigUpdate(BaseModel):
     gateway_ip: str | None = None
     local_subnet: str | None = None
     default_node: str | None = None
+    placement_strategy: str = "dominant_share_min"
+    cpu_overcommit_ratio: float = Field(default=2.0, ge=1.0, le=8.0)
+    disk_overcommit_ratio: float = Field(default=1.0, ge=1.0, le=5.0)
 
 
 class CertParseResult(BaseModel):
@@ -130,6 +136,35 @@ class SyncNowResult(BaseModel):
     error: str | None = None
 
 
+class NodeStatsPublic(BaseModel):
+    """單一節點的即時資源使用狀態"""
+
+    name: str
+    status: str
+    cpu_usage_pct: float   # 0–100
+    cpu_cores: int
+    mem_used_gb: float
+    mem_total_gb: float
+    disk_used_gb: float
+    disk_total_gb: float
+    vm_count: int = 0
+
+
+class ClusterStatsPublic(BaseModel):
+    """整個叢集的資源加總與各節點狀態"""
+
+    nodes: list[NodeStatsPublic]
+    total_cpu_cores: int
+    used_cpu_cores: float   # weighted sum from cpu_ratio * maxcpu
+    total_mem_gb: float
+    used_mem_gb: float
+    total_disk_gb: float
+    used_disk_gb: float
+    online_count: int
+    offline_count: int
+    total_vm_count: int
+
+
 __all__ = [
     "ProxmoxConfigPublic",
     "ProxmoxConfigUpdate",
@@ -141,4 +176,6 @@ __all__ = [
     "ProxmoxStoragePublic",
     "ProxmoxStorageUpdate",
     "SyncNowResult",
+    "NodeStatsPublic",
+    "ClusterStatsPublic",
 ]

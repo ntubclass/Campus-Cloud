@@ -72,7 +72,7 @@ def upsert_storages(session: Session, storages: list[dict]) -> list[ProxmoxStora
                 can_backup=data.get("can_backup", False),
                 is_shared=data.get("is_shared", False),
                 active=data.get("active", True),
-                enabled=True,
+                enabled=data.get("can_vm", False) or data.get("can_lxc", False),
                 speed_tier="unknown",
                 user_priority=5,
             )
