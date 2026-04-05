@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import UTC, datetime
 
 from sqlmodel import Session
 
@@ -23,6 +24,10 @@ from app.services import audit_service, provisioning_service
 logger = logging.getLogger(__name__)
 
 
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
 def _to_public(req: VMRequest, user_override=None) -> VMRequestPublic:
     user = user_override or req.user
     return VMRequestPublic(
@@ -39,6 +44,8 @@ def _to_public(req: VMRequest, user_override=None) -> VMRequestPublic:
         environment_type=req.environment_type,
         os_info=req.os_info,
         expiry_date=req.expiry_date,
+        start_at=req.start_at,
+        end_at=req.end_at,
         ostemplate=req.ostemplate,
         rootfs_size=req.rootfs_size,
         template_id=req.template_id,
@@ -49,6 +56,8 @@ def _to_public(req: VMRequest, user_override=None) -> VMRequestPublic:
         review_comment=req.review_comment,
         reviewed_at=req.reviewed_at,
         vmid=req.vmid,
+        assigned_node=req.assigned_node,
+        placement_strategy_used=req.placement_strategy_used,
         created_at=req.created_at,
     )
 
@@ -64,6 +73,8 @@ def create(
         not request_in.template_id or not request_in.username
     ):
         raise BadRequestError("VM request requires template_id and username")
+    if request_in.end_at <= request_in.start_at:
+        raise BadRequestError("end_at must be later than start_at")
 
     db_request = vm_request_repo.create_vm_request(
         session=session,
@@ -145,10 +156,26 @@ def review(
         raise BadRequestError("This request has already been reviewed")
 
     vmid = None
+    assigned_node = None
+    placement_strategy_used = None
 
     try:
         if review_data.status == VMRequestStatus.approved:
-            vmid = provisioning_service.provision_from_request(
+            if not db_request.start_at or not db_request.end_at:
+                raise BadRequestError(
+                    "A scheduled request window is required before approval."
+                )
+            start_at = db_request.start_at
+            end_at = db_request.end_at
+            if start_at.tzinfo is None:
+                start_at = start_at.replace(tzinfo=UTC)
+            if end_at.tzinfo is None:
+                end_at = end_at.replace(tzinfo=UTC)
+            if end_at <= _utc_now():
+                raise BadRequestError(
+                    "This request window has already ended and can no longer be approved."
+                )
+            vmid, assigned_node, placement_strategy_used = provisioning_service.provision_from_request(
                 session=session, db_request=db_request
             )
 
@@ -159,6 +186,8 @@ def review(
             reviewer_id=reviewer.id,
             review_comment=review_data.review_comment,
             vmid=vmid,
+            assigned_node=assigned_node,
+            placement_strategy_used=placement_strategy_used,
             commit=False,
         )
 
@@ -170,6 +199,10 @@ def review(
         details = f"Reviewed VM request {request_id}: {action}"
         if review_data.status == VMRequestStatus.approved and vmid:
             details += f", created VMID {vmid}"
+        if assigned_node:
+            details += f", assigned node {assigned_node}"
+        if placement_strategy_used:
+            details += f", strategy {placement_strategy_used}"
         if review_data.review_comment:
             details += f". Comment: {review_data.review_comment}"
 

@@ -4,13 +4,15 @@ from fastapi import APIRouter, Query
 
 from app.api.deps import AdminUser, CurrentUser, SessionDep
 from app.schemas import (
+    VMRequestAvailabilityRequest,
+    VMRequestAvailabilityResponse,
     VMRequestCreate,
     VMRequestPublic,
     VMRequestReview,
     VMRequestsPublic,
 )
 from app.models import VMRequestStatus
-from app.services import vm_request_service
+from app.services import vm_request_availability_service, vm_request_service
 
 router = APIRouter(prefix="/vm-requests", tags=["vm-requests"])
 
@@ -21,6 +23,19 @@ def create_vm_request(
 ):
     return vm_request_service.create(
         session=session, request_in=request_in, user=current_user
+    )
+
+
+@router.post("/availability", response_model=VMRequestAvailabilityResponse)
+def get_vm_request_availability(
+    request_in: VMRequestAvailabilityRequest,
+    session: SessionDep,
+    current_user: CurrentUser,
+):
+    return vm_request_availability_service.assess_request(
+        session=session,
+        current_user=current_user,
+        request_in=request_in,
     )
 
 
@@ -55,6 +70,23 @@ def get_vm_request(
 ):
     return vm_request_service.get(
         session=session, request_id=request_id, current_user=current_user
+    )
+
+
+@router.get("/{request_id}/availability", response_model=VMRequestAvailabilityResponse)
+def get_existing_vm_request_availability(
+    request_id: uuid.UUID,
+    session: SessionDep,
+    current_user: CurrentUser,
+    days: int = Query(default=7, ge=1, le=14),
+    timezone: str = Query(default="Asia/Taipei", min_length=1, max_length=64),
+):
+    return vm_request_availability_service.assess_existing_request(
+        session=session,
+        request_id=request_id,
+        current_user=current_user,
+        days=days,
+        timezone=timezone,
     )
 
 

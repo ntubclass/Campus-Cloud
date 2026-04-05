@@ -1,6 +1,7 @@
 import logging
 import uuid
 from collections.abc import Iterable
+from datetime import UTC, datetime
 
 from sqlmodel import Session
 
@@ -16,9 +17,28 @@ from app.schemas import (
     VMTemplateSchema,
 )
 from app.repositories import resource as resource_repo
-from app.services import audit_service, firewall_service, proxmox_service
+from app.services import (
+    audit_service,
+    firewall_service,
+    proxmox_service,
+    vm_request_placement_service,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+def should_start_now(db_request) -> bool:
+    if not getattr(db_request, "start_at", None):
+        return True
+
+    start_at = db_request.start_at
+    if start_at.tzinfo is None:
+        start_at = start_at.replace(tzinfo=UTC)
+    return start_at <= _utc_now()
 
 
 def _to_punycode_hostname(hostname: str) -> str:
@@ -252,27 +272,33 @@ def create_vm(
         raise ProxmoxError(f"Failed to create VM: {e}")
 
 
-def provision_from_request(*, session: Session, db_request) -> int:
-    """Provision a VM or LXC based on an approved request. Returns VMID."""
+def provision_from_request(*, session: Session, db_request) -> tuple[int, str | None, str | None]:
+    """Provision a VM or LXC based on an approved request."""
     new_vmid = proxmox_service.next_vmid()
     plain_password = decrypt_value(db_request.password)
-    target_node = (
-        _get_lxc_target_node()
-        if db_request.resource_type == "lxc"
-        else _get_vm_target_node(db_request.template_id)
+    start_immediately = should_start_now(db_request)
+    placement = vm_request_placement_service.select_current_target_node(
+        session=session,
+        db_request=db_request,
     )
-    target_storage = proxmox_service.resolve_target_storage(
-        target_node,
-        db_request.storage,
-        required_content=(
-            "rootdir" if db_request.resource_type == "lxc" else "images"
-        ),
-    )
+    if not placement.plan.feasible or not placement.node:
+        raise ProxmoxError(
+            f"No feasible placement is available for request {getattr(db_request, 'id', 'unknown')}"
+        )
+    placement_node = placement.node
+    placement_strategy = placement.strategy
+    target_node = placement_node
     resource_type = "lxc" if db_request.resource_type == "lxc" else "qemu"
     created = False
+    actual_node = target_node
 
     try:
         if db_request.resource_type == "lxc":
+            target_storage = proxmox_service.resolve_target_storage(
+                target_node,
+                db_request.storage,
+                required_content="rootdir",
+            )
             config = {
                 "vmid": new_vmid,
                 "hostname": _to_punycode_hostname(db_request.hostname),
@@ -284,7 +310,7 @@ def provision_from_request(*, session: Session, db_request) -> int:
                 "password": plain_password,
                 "net0": "name=eth0,bridge=vmbr0,ip=dhcp,firewall=1",
                 "unprivileged": int(db_request.unprivileged),
-                "start": 1,
+                "start": int(start_immediately),
                 "pool": get_proxmox_settings().pool_name,
             }
             proxmox_service.create_lxc(target_node, **config)
@@ -302,6 +328,14 @@ def provision_from_request(*, session: Session, db_request) -> int:
                 commit=False,
             )
         else:
+            template = proxmox_service.find_vm_template(db_request.template_id)
+            template_node = template["node"]
+            clone_target_node = target_node
+            target_storage = proxmox_service.resolve_target_storage(
+                clone_target_node,
+                db_request.storage,
+                required_content="images",
+            )
             clone_config = {
                 "newid": new_vmid,
                 "name": _to_punycode_hostname(db_request.hostname),
@@ -309,9 +343,38 @@ def provision_from_request(*, session: Session, db_request) -> int:
                 "storage": target_storage,
                 "pool": get_proxmox_settings().pool_name,
             }
-            proxmox_service.clone_vm(
-                target_node, db_request.template_id, **clone_config
-            )
+            if clone_target_node != template_node:
+                clone_config["target"] = clone_target_node
+            try:
+                proxmox_service.clone_vm(
+                    template_node,
+                    db_request.template_id,
+                    **clone_config,
+                )
+                actual_node = clone_target_node
+            except Exception:
+                if clone_target_node == template_node:
+                    raise
+                logger.warning(
+                    "Cross-node clone failed for request %s; falling back to template node %s",
+                    getattr(db_request, "id", "unknown"),
+                    template_node,
+                )
+                actual_node = template_node
+                fallback_storage = proxmox_service.resolve_target_storage(
+                    actual_node,
+                    db_request.storage,
+                    required_content="images",
+                )
+                proxmox_service.clone_vm(
+                    template_node,
+                    db_request.template_id,
+                    newid=new_vmid,
+                    name=_to_punycode_hostname(db_request.hostname),
+                    full=1,
+                    storage=fallback_storage,
+                    pool=get_proxmox_settings().pool_name,
+                )
             created = True
 
             config_updates = {
@@ -323,16 +386,17 @@ def provision_from_request(*, session: Session, db_request) -> int:
                 "ciupgrade": 0,
             }
             proxmox_service.update_config(
-                target_node, new_vmid, "qemu", **config_updates
+                actual_node, new_vmid, "qemu", **config_updates
             )
 
             if db_request.disk_size:
                 proxmox_service.resize_disk(
-                    target_node, new_vmid, "qemu", "scsi0", f"{db_request.disk_size}G"
+                    actual_node, new_vmid, "qemu", "scsi0", f"{db_request.disk_size}G"
                 )
 
-            firewall_service.setup_default_rules(target_node, new_vmid, "qemu")
-            proxmox_service.control(target_node, new_vmid, "qemu", "start")
+            firewall_service.setup_default_rules(actual_node, new_vmid, "qemu")
+            if start_immediately:
+                proxmox_service.control(actual_node, new_vmid, "qemu", "start")
 
             resource_repo.create_resource(
                 session=session,
@@ -347,11 +411,11 @@ def provision_from_request(*, session: Session, db_request) -> int:
     except Exception:
         session.rollback()
         if created:
-            _cleanup_failed_resource(target_node, new_vmid, resource_type)
+            _cleanup_failed_resource(actual_node, new_vmid, resource_type)
         raise
 
     logger.info(f"Provisioned {db_request.resource_type} with VMID {new_vmid}")
-    return new_vmid
+    return new_vmid, actual_node, placement_strategy
 
 
 def get_lxc_templates() -> list[TemplateSchema]:

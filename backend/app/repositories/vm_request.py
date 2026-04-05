@@ -29,6 +29,8 @@ def create_vm_request(
         environment_type=vm_request_in.environment_type,
         os_info=vm_request_in.os_info,
         expiry_date=vm_request_in.expiry_date,
+        start_at=vm_request_in.start_at,
+        end_at=vm_request_in.end_at,
         ostemplate=vm_request_in.ostemplate,
         rootfs_size=vm_request_in.rootfs_size,
         template_id=vm_request_in.template_id,
@@ -106,6 +108,8 @@ def update_vm_request_status(
     reviewer_id: uuid.UUID,
     review_comment: str | None = None,
     vmid: int | None = None,
+    assigned_node: str | None = None,
+    placement_strategy_used: str | None = None,
     commit: bool = True,
 ) -> VMRequest:
     db_request.status = status
@@ -114,6 +118,10 @@ def update_vm_request_status(
     db_request.reviewed_at = datetime.now(timezone.utc)
     if vmid is not None:
         db_request.vmid = vmid
+    if assigned_node is not None:
+        db_request.assigned_node = assigned_node
+    if placement_strategy_used is not None:
+        db_request.placement_strategy_used = placement_strategy_used
     session.add(db_request)
     if commit:
         session.commit()
@@ -121,3 +129,18 @@ def update_vm_request_status(
         session.flush()
     session.refresh(db_request)
     return db_request
+
+
+def get_latest_approved_vm_request_by_vmid(
+    *, session: Session, vmid: int
+) -> VMRequest | None:
+    statement = (
+        select(VMRequest)
+        .where(
+            VMRequest.vmid == vmid,
+            VMRequest.status == VMRequestStatus.approved,
+        )
+        .options(selectinload(VMRequest.user))  # type: ignore[arg-type]
+        .order_by(VMRequest.reviewed_at.desc(), VMRequest.created_at.desc())  # type: ignore[union-attr]
+    )
+    return session.exec(statement).first()

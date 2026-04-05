@@ -42,6 +42,7 @@ export function AppSidebar() {
     { icon: ServerCog, title: t("sidebar.myResources"), path: "/my-resources" },
     { icon: Shield, title: "防火牆", path: "/firewall" },
     { icon: Monitor, title: t("sidebar.resources"), path: "/resources" },
+    { icon: FileText, title: t("sidebar.applications"), path: "/applications" },
     { icon: ClipboardCheck, title: t("sidebar.approvals"), path: "/approvals" },
     { icon: Bot, title: "AI API", path: "/ai-api" },
     { icon: ClipboardCheck, title: "AI API 審核", path: "/ai-api-approvals" },

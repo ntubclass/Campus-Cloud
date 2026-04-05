@@ -42,6 +42,16 @@ class VMRequest(SQLModel, table=True):
     environment_type: str = Field(default="自訂規格", description="環境類型")
     os_info: str | None = Field(default=None, description="作業系統資訊")
     expiry_date: date | None = Field(default=None, description="到期日")
+    start_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+        description="預計開始使用時間",
+    )
+    end_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+        description="預計結束使用時間",
+    )
 
     # LXC 專用
     ostemplate: str | None = Field(default=None, description="LXC 作業系統模板")
@@ -71,6 +81,11 @@ class VMRequest(SQLModel, table=True):
 
     # 建立後的 VMID（審核通過並建立後填入）
     vmid: int | None = Field(default=None, description="建立後的 VM/Container ID")
+    assigned_node: str | None = Field(default=None, description="核准後實際分配節點")
+    placement_strategy_used: str | None = Field(
+        default=None,
+        description="核准時使用的 placement strategy",
+    )
 
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), nullable=False),
