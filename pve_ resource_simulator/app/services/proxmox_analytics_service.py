@@ -21,6 +21,7 @@ from app.schemas import (
     HourlyUsagePoint,
     NodeUsageSummary,
     ProxmoxMonthlyAnalyticsResponse,
+    StorageInfo,
 )
 
 
@@ -175,6 +176,10 @@ async def fetch_monthly_analytics() -> ProxmoxMonthlyAnalyticsResponse:
                 )
                 for node in nodes
             }
+            node_storage_tasks = {
+                node: asyncio.create_task(session.get(f"/nodes/{node}/storage"))
+                for node in nodes
+            }
             guest_status_tasks = {
                 _guest_key(resource): asyncio.create_task(
                     session.get(
@@ -196,6 +201,7 @@ async def fetch_monthly_analytics() -> ProxmoxMonthlyAnalyticsResponse:
 
             node_status_map, node_status_errors = await _await_task_map(node_status_tasks)
             node_rrd_map, node_rrd_errors = await _await_task_map(node_rrd_tasks)
+            node_storage_map, _ = await _await_task_map(node_storage_tasks)
             guest_status_map, guest_status_errors = await _await_task_map(guest_status_tasks)
             guest_rrd_map, guest_rrd_errors = await _await_task_map(guest_rrd_tasks)
     except httpx.HTTPError as exc:
@@ -209,6 +215,7 @@ async def fetch_monthly_analytics() -> ProxmoxMonthlyAnalyticsResponse:
         resources_payload=resources,
         node_status_map=node_status_map,
         node_rrd_map=node_rrd_map,
+        node_storage_map=node_storage_map,
         guest_status_map=guest_status_map,
         guest_rrd_map=guest_rrd_map,
         node_error_map=_merge_error_maps(node_status_errors, node_rrd_errors),
@@ -225,6 +232,7 @@ def build_monthly_analytics(
     resources_payload: list[dict[str, Any]],
     node_status_map: dict[str, dict[str, Any]],
     node_rrd_map: dict[str, list[dict[str, Any]]],
+    node_storage_map: dict[str, list[dict[str, Any]]] | None = None,
     guest_status_map: dict[str, dict[str, Any]],
     guest_rrd_map: dict[str, list[dict[str, Any]]],
     node_error_map: dict[str, str] | None = None,
@@ -234,6 +242,7 @@ def build_monthly_analytics(
     month_start, month_end = _month_window(now)
     node_error_map = node_error_map or {}
     guest_error_map = guest_error_map or {}
+    node_storage_map = node_storage_map or {}
     node_payload_map = {
         str(item.get("node") or item.get("name")): item
         for item in nodes_payload
@@ -282,6 +291,7 @@ def build_monthly_analytics(
                 current_loadavg=_normalize_loadavg(status.get("loadavg")),
                 average_loadavg_1=usage.average_loadavg_1,
                 hourly=usage.hourly,
+                storages=_build_storage_info_list(node_storage_map.get(node, [])),
             )
         )
 
@@ -755,6 +765,36 @@ def _bytes_to_gib(value: Any) -> float | None:
     return numeric / (1024 ** 3)
 
 
+def _build_storage_info_list(raw: list[dict[str, Any]]) -> list[StorageInfo]:
+    """Convert Proxmox /nodes/{node}/storage API response to StorageInfo list."""
+    result = []
+    for s in raw:
+        if not s.get("storage"):
+            continue
+        content = str(s.get("content", ""))
+        total_gib = _bytes_to_gib(s.get("total")) or 0.0
+        used_gib = _bytes_to_gib(s.get("used")) or 0.0
+        avail_gib = _bytes_to_gib(s.get("avail")) or 0.0
+        result.append(
+            StorageInfo(
+                storage=str(s["storage"]),
+                type=str(s["type"]) if s.get("type") else None,
+                total_gb=round(total_gib, 2),
+                used_gb=round(used_gib, 2),
+                avail_gb=round(avail_gib, 2),
+                used_fraction=float(s.get("used_fraction") or 0.0),
+                can_vm="images" in content,
+                can_lxc="rootdir" in content,
+                can_iso="iso" in content,
+                can_backup="backup" in content,
+                is_shared=bool(s.get("shared", 0) == 1),
+                active=bool(s.get("active", 0) == 1),
+                enabled=True,
+            )
+        )
+    return result
+
+
 def _parse_bool(value: Any) -> bool:
     return str(value).strip().lower() not in {"0", "false", "no", "off", ""}
 
@@ -780,27 +820,31 @@ def _read_env_file(path: Path) -> dict[str, str]:
 
 
 def _build_guest_type_summaries(guests: list[GuestUsageSummary]) -> list[GuestTypeUsageSummary]:
-    grouped: dict[tuple[float | None, float | None], list[GuestUsageSummary]] = {}
+    grouped: dict[tuple[str, float | None, float | None], list[GuestUsageSummary]] = {}
     for guest in guests:
         key = (
+            guest.resource_type,
             _round_group_value(guest.configured_cpu_cores),
             _round_group_value(guest.configured_memory_gb),
         )
         grouped.setdefault(key, []).append(guest)
 
     results: list[GuestTypeUsageSummary] = []
-    for (cpu, memory), items in sorted(
+    for (resource_type, cpu, memory), items in sorted(
         grouped.items(),
         key=lambda item: (
+            item[0][0],
             item[0][0] is None,
-            item[0][0] or 0.0,
             item[0][1] is None,
             item[0][1] or 0.0,
+            item[0][2] is None,
+            item[0][2] or 0.0,
         ),
     ):
         results.append(
             GuestTypeUsageSummary(
-                type_label=_format_guest_type_label(cpu, memory),
+                type_label=_format_guest_type_label(resource_type, cpu, memory),
+                resource_type=resource_type,
                 configured_cpu_cores=cpu,
                 configured_memory_gb=memory,
                 guest_count=len(items),
@@ -836,6 +880,7 @@ def build_historical_profiles(guest_types: list[GuestTypeUsageSummary]) -> list[
     return [
         HistoricalProfile(
             type_label=item.type_label,
+            resource_type=item.resource_type,
             configured_cpu_cores=item.configured_cpu_cores,
             configured_memory_gb=item.configured_memory_gb,
             guest_count=item.guest_count,
@@ -892,10 +937,11 @@ def _round_group_value(value: float | None) -> float | None:
     return round(value, 2)
 
 
-def _format_guest_type_label(cpu: float | None, memory: float | None) -> str:
+def _format_guest_type_label(resource_type: str, cpu: float | None, memory: float | None) -> str:
+    prefix = "LXC" if resource_type == "lxc" else "VM"
     if cpu is None or memory is None:
-        return "Unknown config"
-    return f"{_format_number(cpu)} vCPU / {_format_number(memory)} GiB"
+        return f"{prefix} Unknown config"
+    return f"{prefix} {_format_number(cpu)} vCPU / {_format_number(memory)} GiB"
 
 
 def _format_number(value: float) -> str:
