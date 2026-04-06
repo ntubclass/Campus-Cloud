@@ -14,6 +14,7 @@ from .ai_api_usage import AIAPIUsage
 from .base import get_datetime_utc
 from .resource import Resource
 from .user import User, UserBase, UserRole
+from .vm_migration_job import VMMigrationJob, VMMigrationJobStatus
 from .vm_request import VMMigrationStatus, VMRequest, VMRequestStatus
 from .audit_log import AuditAction, AuditLog
 from .spec_change_request import (
@@ -47,6 +48,8 @@ __all__ = [
     "AIAPIRateLimit",
     # Resource
     "Resource",
+    "VMMigrationJob",
+    "VMMigrationJobStatus",
     # VM Request
     "VMMigrationStatus",
     "VMRequest",

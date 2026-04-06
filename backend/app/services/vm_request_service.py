@@ -73,6 +73,7 @@ def _to_public(req: VMRequest, user_override=None) -> VMRequestPublic:
         migration_error=req.migration_error,
         rebalance_epoch=req.rebalance_epoch,
         last_rebalanced_at=req.last_rebalanced_at,
+        last_migrated_at=req.last_migrated_at,
         created_at=req.created_at,
     )
 
@@ -317,6 +318,7 @@ def get_review_context(
         placement_strategy=request_selection.strategy,
         projected_node=request_selection.node,
         summary=request_selection.plan.summary,
+        reasons=list(request_selection.plan.rationale or []),
         warnings=list(request_selection.plan.warnings or []),
         cluster_nodes=sorted(
             {

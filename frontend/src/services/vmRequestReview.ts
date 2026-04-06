@@ -50,6 +50,7 @@ export type VmRequestReviewContext = {
   placement_strategy?: string | null
   projected_node?: string | null
   summary: string
+  reasons: string[]
   warnings: string[]
   cluster_nodes: string[]
   current_running_resources: VmRequestReviewRuntimeResource[]

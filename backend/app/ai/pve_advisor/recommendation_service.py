@@ -442,6 +442,12 @@ def _load_cluster_state() -> tuple[list[NodeSnapshot], list[ResourceSnapshot]]:
             maxdisk_bytes=int(item.get("maxdisk") or 0),
             uptime=_optional_int(item.get("uptime")),
             gpu_count=gpu_map.get(str(item.get("node") or "unknown"), 0),
+            current_loadavg_1=_parse_loadavg_1(item.get("loadavg")),
+            average_loadavg_1=_parse_loadavg_1(
+                item.get("avg_load")
+                or item.get("avgload")
+                or item.get("average_loadavg")
+            ),
         )
         for item in proxmox_service.list_nodes()
     ]
@@ -582,11 +588,13 @@ def _build_node_capacities(
                 disk_ratio=_ratio(node.disk_bytes, node.maxdisk_bytes),
                 total_cpu_cores=round(effective_total_cpu, 2),
                 allocatable_cpu_cores=allocatable_cpu,
-                total_memory_bytes=node.maxmem_bytes,
-                allocatable_memory_bytes=allocatable_memory,
-                total_disk_bytes=effective_total_disk,
-                allocatable_disk_bytes=allocatable_disk,
-            )
+            total_memory_bytes=node.maxmem_bytes,
+            allocatable_memory_bytes=allocatable_memory,
+            total_disk_bytes=effective_total_disk,
+            allocatable_disk_bytes=allocatable_disk,
+            current_loadavg_1=node.current_loadavg_1,
+            average_loadavg_1=node.average_loadavg_1,
+        )
         )
 
     return sorted(capacities, key=lambda item: item.node)
@@ -1041,3 +1049,26 @@ def _optional_int(value: object) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _parse_loadavg_1(value: object) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        parsed = float(value)
+        return parsed if parsed >= 0 else None
+    if isinstance(value, (list, tuple)) and value:
+        return _parse_loadavg_1(value[0])
+    text = str(value).strip()
+    if not text:
+        return None
+    separators = [",", " ", "/"]
+    for separator in separators:
+        if separator in text:
+            first = next((part for part in text.split(separator) if part.strip()), "")
+            return _parse_loadavg_1(first)
+    try:
+        parsed = float(text)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None

@@ -170,6 +170,7 @@ def update_vm_request_status(
     migration_error: str | None = None,
     rebalance_epoch: int | None = None,
     last_rebalanced_at: datetime | None = None,
+    last_migrated_at: datetime | None = None,
     commit: bool = True,
 ) -> VMRequest:
     db_request.status = status
@@ -193,6 +194,8 @@ def update_vm_request_status(
         db_request.rebalance_epoch = rebalance_epoch
     if last_rebalanced_at is not None:
         db_request.last_rebalanced_at = last_rebalanced_at
+    if last_migrated_at is not None:
+        db_request.last_migrated_at = last_migrated_at
     session.add(db_request)
     if commit:
         session.commit()
@@ -215,6 +218,7 @@ def update_vm_request_provisioning(
     migration_error: str | None = None,
     rebalance_epoch: int | None = None,
     last_rebalanced_at: datetime | None = None,
+    last_migrated_at: datetime | None = None,
     commit: bool = True,
 ) -> VMRequest:
     if vmid is not None:
@@ -231,6 +235,8 @@ def update_vm_request_provisioning(
         db_request.rebalance_epoch = rebalance_epoch
     if last_rebalanced_at is not None:
         db_request.last_rebalanced_at = last_rebalanced_at
+    if last_migrated_at is not None:
+        db_request.last_migrated_at = last_migrated_at
     session.add(db_request)
     if commit:
         session.commit()

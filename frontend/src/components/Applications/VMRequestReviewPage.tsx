@@ -384,6 +384,22 @@ export function VMRequestReviewPage({ requestId }: { requestId: string }) {
           <h2 className="text-lg font-semibold">審核判斷</h2>
           <p className="mt-1 text-sm text-muted-foreground">{context.summary}</p>
 
+          {context.reasons.length > 0 && (
+            <div className="mt-4 rounded-xl border border-border/70 bg-background/50 p-3">
+              <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                為什麼選這台節點
+              </div>
+              <ul className="mt-2 grid gap-2 text-sm leading-6">
+                {context.reasons.map((reason) => (
+                  <li key={reason} className="flex gap-2">
+                    <span className="mt-[2px] text-primary">•</span>
+                    <span>{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {context.warnings.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
               {context.warnings.map((warning) => (

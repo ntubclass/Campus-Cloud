@@ -94,6 +94,7 @@ class VMRequestPublic(BaseModel):
     migration_error: str | None = None
     rebalance_epoch: int = 0
     last_rebalanced_at: datetime | None = None
+    last_migrated_at: datetime | None = None
     created_at: datetime
 
 
@@ -128,6 +129,7 @@ class VMRequestReviewOverlapItem(BaseModel):
     projected_node: str | None = None
     projected_strategy: str | None = None
     migration_status: VMMigrationStatus = VMMigrationStatus.idle
+    last_migrated_at: datetime | None = None
     is_current_request: bool = False
     is_running_now: bool = False
     is_provisioned: bool = False
@@ -149,6 +151,7 @@ class VMRequestReviewContext(BaseModel):
     placement_strategy: str | None = None
     projected_node: str | None = None
     summary: str
+    reasons: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     cluster_nodes: list[str] = Field(default_factory=list)
     current_running_resources: list[VMRequestReviewRuntimeResource] = Field(

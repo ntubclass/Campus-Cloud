@@ -22,6 +22,24 @@ class ProxmoxConfigPublic(BaseModel):
     placement_strategy: str = "priority_dominant_share"
     cpu_overcommit_ratio: float = 2.0
     disk_overcommit_ratio: float = 1.0
+    migration_enabled: bool = True
+    migration_max_per_rebalance: int = 2
+    migration_min_interval_minutes: int = 60
+    migration_retry_limit: int = 3
+    rebalance_migration_cost: float = 0.15
+    rebalance_peak_cpu_margin: float = 1.1
+    rebalance_peak_memory_margin: float = 1.05
+    rebalance_loadavg_warn_per_core: float = 0.8
+    rebalance_loadavg_max_per_core: float = 1.5
+    rebalance_loadavg_penalty_weight: float = 0.9
+    rebalance_disk_contention_warn_share: float = 0.7
+    rebalance_disk_contention_high_share: float = 0.9
+    rebalance_disk_penalty_weight: float = 0.75
+    rebalance_search_max_relocations: int = 2
+    rebalance_search_depth: int = 3
+    migration_worker_concurrency: int = 2
+    migration_job_claim_timeout_seconds: int = 300
+    migration_retry_backoff_seconds: int = 120
     updated_at: datetime | None = None
     is_configured: bool
     has_ca_cert: bool
@@ -47,6 +65,24 @@ class ProxmoxConfigUpdate(BaseModel):
     placement_strategy: str = "priority_dominant_share"
     cpu_overcommit_ratio: float = Field(default=2.0, ge=1.0, le=8.0)
     disk_overcommit_ratio: float = Field(default=1.0, ge=1.0, le=5.0)
+    migration_enabled: bool = True
+    migration_max_per_rebalance: int = Field(default=2, ge=0, le=20)
+    migration_min_interval_minutes: int = Field(default=60, ge=0, le=10080)
+    migration_retry_limit: int = Field(default=3, ge=0, le=10)
+    rebalance_migration_cost: float = Field(default=0.15, ge=0.0, le=5.0)
+    rebalance_peak_cpu_margin: float = Field(default=1.1, ge=1.0, le=2.0)
+    rebalance_peak_memory_margin: float = Field(default=1.05, ge=1.0, le=2.0)
+    rebalance_loadavg_warn_per_core: float = Field(default=0.8, ge=0.0, le=4.0)
+    rebalance_loadavg_max_per_core: float = Field(default=1.5, ge=0.1, le=8.0)
+    rebalance_loadavg_penalty_weight: float = Field(default=0.9, ge=0.0, le=5.0)
+    rebalance_disk_contention_warn_share: float = Field(default=0.7, ge=0.0, le=1.5)
+    rebalance_disk_contention_high_share: float = Field(default=0.9, ge=0.1, le=2.0)
+    rebalance_disk_penalty_weight: float = Field(default=0.75, ge=0.0, le=5.0)
+    rebalance_search_max_relocations: int = Field(default=2, ge=0, le=10)
+    rebalance_search_depth: int = Field(default=3, ge=0, le=10)
+    migration_worker_concurrency: int = Field(default=2, ge=1, le=20)
+    migration_job_claim_timeout_seconds: int = Field(default=300, ge=30, le=86400)
+    migration_retry_backoff_seconds: int = Field(default=120, ge=0, le=86400)
 
 
 class CertParseResult(BaseModel):
