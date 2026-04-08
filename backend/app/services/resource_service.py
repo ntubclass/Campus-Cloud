@@ -365,7 +365,7 @@ def direct_update_spec(
             session=session,
             user_id=user_id,
             vmid=vmid,
-            action="config_update",
+            action="spec_direct_update",
             details=f"Direct spec update: {', '.join(changes)}",
         )
 

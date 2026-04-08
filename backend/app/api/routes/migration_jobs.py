@@ -7,8 +7,9 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
 from app.api.deps import AdminUser, SessionDep
-from app.models import VMMigrationJob, VMMigrationJobStatus
+from app.models import AuditAction, VMMigrationJob, VMMigrationJobStatus
 from app.repositories import vm_migration_job as vm_migration_job_repo
+from app.services import audit_service
 
 router = APIRouter(prefix="/migration-jobs", tags=["migration-jobs"])
 
@@ -139,6 +140,16 @@ def retry_migration_job(
         finished_at=None,
         commit=True,
     )
+    audit_service.log_action(
+        session=session,
+        user_id=current_user.id,
+        vmid=job.vmid,
+        action=AuditAction.migration_job_retry,
+        details=(
+            f"Retried migration job {job_id} (vmid={job.vmid}, "
+            f"target={job.target_node})"
+        ),
+    )
     return _job_to_public(updated)
 
 
@@ -170,5 +181,15 @@ def cancel_migration_job(
         last_error=f"Manually cancelled by {current_user.email}",
         finished_at=now,
         commit=True,
+    )
+    audit_service.log_action(
+        session=session,
+        user_id=current_user.id,
+        vmid=job.vmid,
+        action=AuditAction.migration_job_cancel,
+        details=(
+            f"Cancelled migration job {job_id} (vmid={job.vmid}, "
+            f"target={job.target_node})"
+        ),
     )
     return _job_to_public(updated)

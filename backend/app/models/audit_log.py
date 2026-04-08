@@ -62,6 +62,52 @@ class AuditAction(str, enum.Enum):
     # 腳本部署
     script_deploy = "script_deploy"
 
+    # 認證 / Login
+    login_success = "login_success"
+    login_failed = "login_failed"
+    login_google_success = "login_google_success"
+    login_google_failed = "login_google_failed"
+    password_change = "password_change"
+    password_recovery_request = "password_recovery_request"
+    password_reset = "password_reset"
+
+    # 防火牆
+    firewall_layout_update = "firewall_layout_update"
+    firewall_connection_create = "firewall_connection_create"
+    firewall_connection_delete = "firewall_connection_delete"
+    firewall_rule_create = "firewall_rule_create"
+    firewall_rule_update = "firewall_rule_update"
+    firewall_rule_delete = "firewall_rule_delete"
+    nat_rule_delete = "nat_rule_delete"
+    nat_rule_sync = "nat_rule_sync"
+    reverse_proxy_rule_delete = "reverse_proxy_rule_delete"
+    reverse_proxy_rule_sync = "reverse_proxy_rule_sync"
+
+    # Gateway
+    gateway_config_update = "gateway_config_update"
+    gateway_keypair_generate = "gateway_keypair_generate"
+    gateway_config_write = "gateway_config_write"
+    gateway_service_control = "gateway_service_control"
+
+    # Proxmox 設定
+    proxmox_config_update = "proxmox_config_update"
+    proxmox_node_update = "proxmox_node_update"
+    proxmox_storage_update = "proxmox_storage_update"
+    proxmox_sync_nodes = "proxmox_sync_nodes"
+    proxmox_sync_now = "proxmox_sync_now"
+
+    # Migration jobs
+    migration_job_retry = "migration_job_retry"
+    migration_job_cancel = "migration_job_cancel"
+
+    # 規格直改
+    spec_direct_update = "spec_direct_update"
+
+    # AI API 憑證
+    ai_api_credential_rotate = "ai_api_credential_rotate"
+    ai_api_credential_delete = "ai_api_credential_delete"
+    ai_api_credential_update = "ai_api_credential_update"
+
 
 class AuditLog(SQLModel, table=True):
     """審計日誌表"""

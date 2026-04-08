@@ -27,7 +27,13 @@ from .ai_proxy import (
     RateLimitStatusResponse,
     UsageStatsResponse,
 )
-from .audit_log import AuditLogPublic, AuditLogsPublic
+from .audit_log import (
+    AuditActionMeta,
+    AuditLogPublic,
+    AuditLogStats,
+    AuditLogsPublic,
+    AuditUserOption,
+)
 from .common import Message, NewPassword, Token, TokenPayload
 from .resource import (
     CurrentStatsResponse,
@@ -187,6 +193,9 @@ __all__ = [
     # Audit Log
     "AuditLogPublic",
     "AuditLogsPublic",
+    "AuditLogStats",
+    "AuditActionMeta",
+    "AuditUserOption",
     # Spec Change Request
     "SpecChangeRequestCreate",
     "SpecChangeRequestReview",

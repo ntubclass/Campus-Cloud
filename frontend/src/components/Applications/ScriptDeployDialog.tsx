@@ -109,7 +109,7 @@ export function ScriptDeployPage({
   const scriptPath = defaultMethod?.script || `ct/${template.slug}.sh`
 
   // Deployment state
-  const [taskId, setTaskId] = useState<string | null>(null)
+  const [_taskId, setTaskId] = useState<string | null>(null)
   const [, setDeploying] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const deployStartedRef = useRef(false)

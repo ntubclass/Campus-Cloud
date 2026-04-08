@@ -6,7 +6,7 @@ import {
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
-import type { Body_create_spec_change_request_api_v1_spec_change_requests__post } from "@/client"
+import type { SpecChangeRequestCreate } from "@/client"
 import {
   ResourceDetailsService,
   ResourcesService,
@@ -58,7 +58,7 @@ export default function SpecificationsTab({ vmid }: SpecificationsTabProps) {
 
   const requestMutation = useMutation({
     mutationFn: (
-      data: Body_create_spec_change_request_api_v1_spec_change_requests__post,
+      data: SpecChangeRequestCreate,
     ) =>
       SpecChangeRequestsService.createSpecChangeRequest({ requestBody: data }),
     onSuccess: () => {

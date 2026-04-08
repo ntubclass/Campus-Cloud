@@ -65,17 +65,41 @@
       "isActive": "有効ですか？"
     },
     "auditLogs": {
-      "title": "操作ログ",
+      "title": "監査ログ",
       "description": "すべてのシステム操作記録を表示",
       "allRecords": "すべての操作記録",
       "showing": "表示中",
       "records": "件の記録",
       "filterByVMID": "VMIDで絞り込み...",
       "allActions": "すべてのアクション",
+      "allUsers": "すべてのユーザー",
+      "allCategories": "すべてのカテゴリ",
       "vmid": "VMID",
       "ipAddress": "IPアドレス",
+      "userAgent": "User Agent",
       "page": "ページ",
-      "userCreate": "ユーザー作成"
+      "userCreate": "ユーザー作成",
+      "searchPlaceholder": "詳細を検索...",
+      "filterByIP": "IPで絞り込み...",
+      "startDate": "開始日",
+      "endDate": "終了日",
+      "export": "CSV出力",
+      "statsTotal": "合計",
+      "statsDanger": "危険操作",
+      "statsLoginFailed": "ログイン失敗",
+      "statsActiveUsers": "アクティブユーザー",
+      "noRecords": "監査ログ記録が見つかりません",
+      "categories": {
+        "auth": "認証",
+        "resource": "リソース",
+        "request": "申請",
+        "user": "ユーザー / グループ",
+        "firewall": "ファイアウォール",
+        "gateway": "ゲートウェイ",
+        "system": "システム",
+        "ai": "AI API",
+        "other": "その他"
+      }
     }
   },
   "operationRecords": {

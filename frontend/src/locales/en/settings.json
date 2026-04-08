@@ -75,10 +75,34 @@
       "records": "records",
       "filterByVMID": "Filter by VMID...",
       "allActions": "All Actions",
+      "allUsers": "All Users",
+      "allCategories": "All Categories",
       "vmid": "VMID",
       "ipAddress": "IP Address",
+      "userAgent": "User Agent",
       "page": "Page",
-      "userCreate": "User Created"
+      "userCreate": "User Created",
+      "searchPlaceholder": "Search details...",
+      "filterByIP": "Filter by IP...",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "export": "Export CSV",
+      "statsTotal": "Total",
+      "statsDanger": "Danger Ops",
+      "statsLoginFailed": "Login Failed",
+      "statsActiveUsers": "Active Users",
+      "noRecords": "No audit log records found",
+      "categories": {
+        "auth": "Authentication",
+        "resource": "Resource",
+        "request": "Request",
+        "user": "User / Group",
+        "firewall": "Firewall",
+        "gateway": "Gateway",
+        "system": "System",
+        "ai": "AI API",
+        "other": "Other"
+      }
     }
   },
   "operationRecords": {

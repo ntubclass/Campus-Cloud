@@ -234,6 +234,13 @@ def update_password(
     current_user.hashed_password = get_password_hash(new_password)
     current_user.token_version += 1  # Invalidate all existing tokens
     session.add(current_user)
+    audit_service.log_action(
+        session=session,
+        user_id=current_user.id,
+        action="password_change",
+        details=f"User {current_user.email} changed their password",
+        commit=False,
+    )
     session.commit()
 
 

@@ -48,7 +48,7 @@ const PVE_PROTOCOLS = [
   { value: "vrrp", label: "VRRP", hasPort: false },
 ] as const
 
-const PROTOCOLS_WITH_PORT = new Set(
+const PROTOCOLS_WITH_PORT: Set<string> = new Set(
   PVE_PROTOCOLS.filter((p) => p.hasPort).map((p) => p.value),
 )
 

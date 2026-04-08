@@ -67,7 +67,6 @@ function InstallCommand({ publicKey }: { publicKey: string }) {
 // ─── 服務控制面板 ──────────────────────────────────────────────────────────────
 
 function ServicePanel({ service }: { service: GatewayService }) {
-  const queryClient = useQueryClient()
   const [editorContent, setEditorContent] = useState<string>("")
   const [confirmAction, setConfirmAction] = useState<ServiceAction | null>(null)
 

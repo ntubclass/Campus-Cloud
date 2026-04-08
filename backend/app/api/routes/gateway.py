@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 
 from app.api.deps import AdminUser, SessionDep
+from app.models import AuditAction
 from app.repositories import gateway_config as gw_repo
 from app.schemas.gateway import (
     GatewayConfigPublic,
@@ -17,7 +18,7 @@ from app.schemas.gateway import (
     ServiceStatusResult,
 )
 from app.schemas.common import Message
-from app.services import gateway_service
+from app.services import audit_service, gateway_service
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ def get_config(session: SessionDep, _: AdminUser):
 def update_config(
     data: GatewayConfigUpdate,
     session: SessionDep,
-    _: AdminUser,
+    current_user: AdminUser,
 ):
     """更新 Gateway VM 連線設定（IP / SSH port / user）"""
     config = gw_repo.upsert_connection_settings(
@@ -67,6 +68,15 @@ def update_config(
         host=data.host,
         ssh_port=data.ssh_port,
         ssh_user=data.ssh_user,
+    )
+    audit_service.log_action(
+        session=session,
+        user_id=current_user.id,
+        action=AuditAction.gateway_config_update,
+        details=(
+            f"Updated gateway config: host={data.host} "
+            f"port={data.ssh_port} user={data.ssh_user}"
+        ),
     )
     return GatewayConfigPublic(
         host=config.host,
@@ -78,13 +88,19 @@ def update_config(
 
 
 @router.post("/generate-keypair", response_model=GatewayConfigPublic)
-def generate_keypair(session: SessionDep, _: AdminUser):
+def generate_keypair(session: SessionDep, current_user: AdminUser):
     """生成新的 ED25519 SSH Keypair 並儲存（原有私鑰將被覆蓋）"""
     private_key_pem, public_key = gateway_service.generate_ed25519_keypair()
     config = gw_repo.save_keypair(
         session=session,
         private_key_pem=private_key_pem,
         public_key=public_key,
+    )
+    audit_service.log_action(
+        session=session,
+        user_id=current_user.id,
+        action=AuditAction.gateway_keypair_generate,
+        details="Generated new ED25519 SSH keypair for Gateway VM",
     )
     return GatewayConfigPublic(
         host=config.host,
@@ -154,13 +170,19 @@ def write_config(
     service: str,
     body: ServiceConfigWrite,
     session: SessionDep,
-    _: AdminUser,
+    current_user: AdminUser,
 ):
     """寫入設定檔到 Gateway VM"""
     _require_valid_service(service)
     try:
         gateway_service.write_service_config(
             session=session, service=service, content=body.content
+        )
+        audit_service.log_action(
+            session=session,
+            user_id=current_user.id,
+            action=AuditAction.gateway_config_write,
+            details=f"Wrote {service} config to Gateway VM ({len(body.content)} bytes)",
         )
         return Message(message=f"{service} 設定已儲存")
     except Exception as e:
@@ -190,7 +212,7 @@ def control_service(
     service: str,
     action: str,
     session: SessionDep,
-    _: AdminUser,
+    current_user: AdminUser,
 ):
     """控制服務（start / stop / restart / reload）"""
     _require_valid_service(service)
@@ -200,6 +222,12 @@ def control_service(
     try:
         success, output = gateway_service.control_service(
             session=session, service=service, action=action
+        )
+        audit_service.log_action(
+            session=session,
+            user_id=current_user.id,
+            action=AuditAction.gateway_service_control,
+            details=f"Gateway service {action}: {service} (success={success})",
         )
         return ServiceActionResult(
             service=service, action=action, success=success, output=output

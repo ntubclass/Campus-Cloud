@@ -888,6 +888,7 @@ export type TerminalInfoSchema = {
 export type Token = {
     access_token: string;
     token_type?: string;
+    refresh_token?: (string | null);
 };
 
 /**
@@ -1135,6 +1136,10 @@ export type VMSchema = {
     template?: (number | null);
     memhost?: (number | null);
     maxdisk?: (number | null);
+    ip_address?: (string | null);
+    environment_type?: (string | null);
+    os_info?: (string | null);
+    expiry_date?: (string | null);
 };
 
 /**
@@ -1504,7 +1509,11 @@ export type ResourcesGetResourceConfigData = {
     vmid: number;
 };
 
-export type ResourcesGetResourceConfigResponse = (unknown);
+export type ResourcesGetResourceConfigResponse = ({
+    cores?: number | null;
+    memory?: number | null;
+    disk?: number | null;
+});
 
 export type ResourcesStartResourceData = {
     vmid: number;

@@ -68,17 +68,41 @@
       "isActive": "是否啟用？"
     },
     "auditLogs": {
-      "title": "操作記錄",
+      "title": "稽核日誌",
       "description": "查看所有系統操作記錄",
       "allRecords": "所有操作記錄",
       "showing": "顯示",
       "records": "筆記錄",
       "filterByVMID": "依 VMID 篩選...",
       "allActions": "所有動作",
+      "allUsers": "所有使用者",
+      "allCategories": "所有類別",
       "vmid": "VMID",
       "ipAddress": "IP 位址",
+      "userAgent": "User Agent",
       "page": "頁",
-      "userCreate": "使用者已建立"
+      "userCreate": "使用者已建立",
+      "searchPlaceholder": "搜尋詳情...",
+      "filterByIP": "依 IP 篩選...",
+      "startDate": "開始日期",
+      "endDate": "結束日期",
+      "export": "匯出 CSV",
+      "statsTotal": "總計",
+      "statsDanger": "危險操作",
+      "statsLoginFailed": "登入失敗",
+      "statsActiveUsers": "活躍使用者",
+      "noRecords": "找不到稽核日誌記錄",
+      "categories": {
+        "auth": "認證",
+        "resource": "資源",
+        "request": "申請",
+        "user": "使用者 / 群組",
+        "firewall": "防火牆",
+        "gateway": "Gateway",
+        "system": "系統",
+        "ai": "AI API",
+        "other": "其他"
+      }
     }
   },
   "operationRecords": {

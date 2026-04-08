@@ -60,7 +60,6 @@ export default function useXTermDisplay({
           },
           scrollback: 5000,
           convertEol: true,
-          fastScrollModifier: "alt",
           smoothScrollDuration: 0,
         })
 

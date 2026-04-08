@@ -13,6 +13,7 @@ from app.api.websocket import vnc_proxy
 from app.api.websocket.terminal import terminal_proxy
 from app.core.config import settings
 from app.core.redis import close_redis, init_redis
+from app.core.request_context import RequestContextMiddleware
 from app.exceptions import AppError
 from app.services import vm_request_schedule_service
 
@@ -104,6 +105,7 @@ app = FastAPI(
 )
 
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestContextMiddleware)
 
 if settings.all_cors_origins:
     app.add_middleware(

@@ -28,3 +28,27 @@ class AuditLogsPublic(BaseModel):
 
     data: list[AuditLogPublic]
     count: int
+
+
+class AuditLogStats(BaseModel):
+    """審計日誌儀表板統計卡片資料"""
+
+    total: int
+    danger: int
+    login_failed: int
+    active_users: int
+
+
+class AuditActionMeta(BaseModel):
+    """單一 action 元資訊（給前端 select 使用）"""
+
+    value: str
+    category: str
+
+
+class AuditUserOption(BaseModel):
+    """操作者下拉選單選項"""
+
+    id: uuid.UUID
+    email: str
+    full_name: str | None = None

@@ -282,7 +282,7 @@ def rotate_credential(
     audit_service.log_action(
         session=session,
         user_id=current_user.id,
-        action="ai_api_request_review",
+        action="ai_api_credential_rotate",
         details=f"Rotated AI API credential {credential_id}",
         commit=False,
     )
@@ -303,7 +303,7 @@ def delete_credential(
     audit_service.log_action(
         session=session,
         user_id=current_user.id,
-        action="ai_api_request_review",
+        action="ai_api_credential_delete",
         details=f"Deleted AI API credential {credential_id}",
         commit=False,
     )
@@ -324,7 +324,7 @@ def update_credential_name(
     audit_service.log_action(
         session=session,
         user_id=current_user.id,
-        action="ai_api_request_review",
+        action="ai_api_credential_update",
         details=f"Renamed AI API credential {credential_id} to '{name}'",
         commit=False,
     )

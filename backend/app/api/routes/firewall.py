@@ -26,7 +26,14 @@ from app.schemas.firewall import (
     ReverseProxyRulePublic,
     TopologyResponse,
 )
-from app.services import firewall_service, nat_service, proxmox_service, reverse_proxy_service
+from app.models import AuditAction
+from app.services import (
+    audit_service,
+    firewall_service,
+    nat_service,
+    proxmox_service,
+    reverse_proxy_service,
+)
 from app.services.firewall_service import _BLOCK_LOCAL_COMMENT
 
 logger = logging.getLogger(__name__)
@@ -89,6 +96,12 @@ def save_layout(
     layout_repo.upsert_layout_batch(
         session=session, user_id=current_user.id, nodes=nodes
     )
+    audit_service.log_action(
+        session=session,
+        user_id=current_user.id,
+        action=AuditAction.firewall_layout_update,
+        details=f"Saved firewall layout ({len(nodes)} nodes)",
+    )
     return Message(message="佈局已儲存")
 
 
@@ -128,6 +141,16 @@ def create_connection(
             ports=conn.ports,
             direction=conn.direction,
             session=session,
+        )
+        audit_service.log_action(
+            session=session,
+            user_id=current_user.id,
+            vmid=conn.source_vmid or conn.target_vmid,
+            action=AuditAction.firewall_connection_create,
+            details=(
+                f"Firewall connection: src={conn.source_vmid} → "
+                f"dst={conn.target_vmid} ports={conn.ports} dir={conn.direction}"
+            ),
         )
         return Message(message="連線已建立")
     except (BadRequestError, NotFoundError) as e:
@@ -173,6 +196,16 @@ def delete_connection(
             target_vmid=conn.target_vmid,
             ports=conn.ports,
             session=session,
+        )
+        audit_service.log_action(
+            session=session,
+            user_id=current_user.id,
+            vmid=conn.source_vmid or conn.target_vmid,
+            action=AuditAction.firewall_connection_delete,
+            details=(
+                f"Deleted firewall connection: src={conn.source_vmid} → "
+                f"dst={conn.target_vmid} ports={conn.ports}"
+            ),
         )
         return Message(message="連線已刪除")
     except (BadRequestError, NotFoundError) as e:
@@ -237,6 +270,13 @@ def create_rule(
         resource = proxmox_service.find_resource(vmid)
         rule_dict = {k: v for k, v in rule.model_dump().items() if v is not None}
         firewall_service.create_rule(resource["node"], vmid, resource["type"], rule_dict)
+        audit_service.log_action(
+            session=session,
+            user_id=current_user.id,
+            vmid=vmid,
+            action=AuditAction.firewall_rule_create,
+            details=f"Created firewall rule on VM {vmid}: {rule_dict}",
+        )
         return Message(message="規則已建立")
     except NotFoundError:
         raise HTTPException(status_code=404, detail=f"VM {vmid} 不存在")
@@ -269,6 +309,13 @@ def update_rule(
         firewall_service.update_rule(
             resource["node"], vmid, resource["type"], pos, rule_dict
         )
+        audit_service.log_action(
+            session=session,
+            user_id=current_user.id,
+            vmid=vmid,
+            action=AuditAction.firewall_rule_update,
+            details=f"Updated firewall rule pos={pos} on VM {vmid}: {rule_dict}",
+        )
         return Message(message="規則已更新")
     except NotFoundError:
         raise HTTPException(status_code=404, detail=f"VM {vmid} 不存在")
@@ -298,6 +345,13 @@ def delete_rule(
                 detail="此規則由 Campus Cloud 管理，請使用連線管理介面進行操作",
             )
         firewall_service.delete_rule_by_pos(resource["node"], vmid, resource["type"], pos)
+        audit_service.log_action(
+            session=session,
+            user_id=current_user.id,
+            vmid=vmid,
+            action=AuditAction.firewall_rule_delete,
+            details=f"Deleted firewall rule pos={pos} on VM {vmid}",
+        )
         return Message(message="規則已刪除")
     except HTTPException:
         raise
@@ -369,6 +423,16 @@ def delete_nat_rule(
 
     try:
         nat_service.remove_nat_rule_by_id(session=session, rule_id=rule_id)
+        audit_service.log_action(
+            session=session,
+            user_id=current_user.id,
+            vmid=rule.vmid,
+            action=AuditAction.nat_rule_delete,
+            details=(
+                f"Deleted NAT rule {rule_id} (vmid={rule.vmid} "
+                f"ext={rule.external_port} → int={rule.internal_port}/{rule.protocol})"
+            ),
+        )
         return Message(message="NAT 規則已刪除")
     except ProxmoxError as e:
         logger.error(f"Proxmox error removing NAT rule {rule_id}: {e}")
@@ -388,6 +452,12 @@ def sync_nat_rules(
         raise HTTPException(status_code=403, detail="僅限管理員操作")
     try:
         nat_service.sync_to_gateway(session=session)
+        audit_service.log_action(
+            session=session,
+            user_id=current_user.id,
+            action=AuditAction.nat_rule_sync,
+            details="Manually synced NAT rules to Gateway VM",
+        )
         return Message(message="NAT 規則已同步到 Gateway VM")
     except ProxmoxError as e:
         logger.error(f"Proxmox error syncing NAT rules: {e}")
@@ -458,6 +528,16 @@ def delete_reverse_proxy_rule(
 
     try:
         reverse_proxy_service.remove_reverse_proxy_rule_by_id(session=session, rule_id=rule_id)
+        audit_service.log_action(
+            session=session,
+            user_id=current_user.id,
+            vmid=rule.vmid,
+            action=AuditAction.reverse_proxy_rule_delete,
+            details=(
+                f"Deleted reverse proxy rule {rule_id} "
+                f"(vmid={rule.vmid} domain={rule.domain})"
+            ),
+        )
         return Message(message="反向代理規則已刪除")
     except ProxmoxError as e:
         logger.error(f"Proxmox error removing reverse proxy rule {rule_id}: {e}")
@@ -477,6 +557,12 @@ def sync_reverse_proxy_rules(
         raise HTTPException(status_code=403, detail="僅限管理員操作")
     try:
         reverse_proxy_service.sync_to_gateway(session=session)
+        audit_service.log_action(
+            session=session,
+            user_id=current_user.id,
+            action=AuditAction.reverse_proxy_rule_sync,
+            details="Manually synced reverse proxy rules to Gateway VM",
+        )
         return Message(message="反向代理規則已同步到 Gateway VM")
     except ProxmoxError as e:
         logger.error(f"Proxmox error syncing reverse proxy rules: {e}")

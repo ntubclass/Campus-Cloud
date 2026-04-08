@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next"
 
 import ChangePassword from "@/components/UserSettings/ChangePassword"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
-import OperationRecords from "@/components/UserSettings/OperationRecords"
 import UserInformation from "@/components/UserSettings/UserInformation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
@@ -30,11 +29,6 @@ function UserSettings() {
       component: UserInformation,
     },
     { value: "password", title: t("tabs.password"), component: ChangePassword },
-    {
-      value: "operation-records",
-      title: t("tabs.operationRecords"),
-      component: OperationRecords,
-    },
     {
       value: "danger-zone",
       title: t("tabs.dangerZone"),

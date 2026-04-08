@@ -6,6 +6,7 @@ import {
   Home,
   Monitor,
   Network,
+  ScrollText,
   ServerCog,
   Settings2,
   Shield,
@@ -69,6 +70,7 @@ export function AppSidebar() {
     { icon: Settings2, title: "系統設定", path: "/admin/configuration" },
     { icon: ArrowRightLeft, title: "Migration Jobs", path: "/admin/migration-jobs" },
     { icon: Network, title: "Gateway VM", path: "/admin/gateway" },
+    { icon: ScrollText, title: "稽核日誌", path: "/admin/audit-logs" },
   ]
 
   const items =

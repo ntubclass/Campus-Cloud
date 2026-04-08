@@ -11,9 +11,11 @@ from fastapi import APIRouter, Body, HTTPException
 
 from app.api.deps import AdminUser, SessionDep
 from app.exceptions import BadRequestError
+from app.models import AuditAction
 from app.repositories import proxmox_config as proxmox_config_repo
 from app.repositories import proxmox_node as proxmox_node_repo
 from app.repositories import proxmox_storage as proxmox_storage_repo
+from app.services import audit_service
 from app.schemas.proxmox_config import (
     CertParseResult,
     ClusterPreviewResult,
@@ -302,6 +304,13 @@ def update_proxmox_config(
     from app.core.proxmox import invalidate_proxmox_client
     invalidate_proxmox_client()
 
+    audit_service.log_action(
+        session=session,
+        user_id=current_user.id,
+        action=AuditAction.proxmox_config_update,
+        details=f"Updated Proxmox config: host={config_in.host} user={config_in.user}",
+    )
+
     return _to_public(config, is_configured=True)
 
 
@@ -384,6 +393,16 @@ def sync_nodes(
     from app.core.proxmox import invalidate_proxmox_client
     invalidate_proxmox_client()
 
+    audit_service.log_action(
+        session=session,
+        user_id=current_user.id,
+        action=AuditAction.proxmox_sync_nodes,
+        details=(
+            f"Synced {len(saved)} cluster nodes: "
+            + ", ".join(n.name for n in saved)
+        ),
+    )
+
     return [_node_to_public(n) for n in saved]
 
 
@@ -430,6 +449,15 @@ def update_node(
     )
     if node is None:
         raise HTTPException(status_code=404, detail="Node not found")
+    audit_service.log_action(
+        session=session,
+        user_id=current_user.id,
+        action=AuditAction.proxmox_node_update,
+        details=(
+            f"Updated node {node.name}: host={node_in.host} "
+            f"port={node_in.port} priority={node_in.priority}"
+        ),
+    )
     return _node_to_public(node)
 
 
@@ -459,6 +487,15 @@ def update_storage(
     )
     if s is None:
         raise HTTPException(status_code=404, detail="Storage not found")
+    audit_service.log_action(
+        session=session,
+        user_id=current_user.id,
+        action=AuditAction.proxmox_storage_update,
+        details=(
+            f"Updated storage {s.storage}: enabled={storage_in.enabled} "
+            f"speed_tier={storage_in.speed_tier} priority={storage_in.user_priority}"
+        ),
+    )
     return _storage_to_public(s)
 
 
@@ -551,6 +588,16 @@ def sync_now(
 
         from app.core.proxmox import invalidate_proxmox_client
         invalidate_proxmox_client()
+
+        audit_service.log_action(
+            session=session,
+            user_id=current_user.id,
+            action=AuditAction.proxmox_sync_now,
+            details=(
+                f"Sync-now: {len(saved_nodes)} nodes, "
+                f"{len(saved_storages)} storages"
+            ),
+        )
 
         return SyncNowResult(
             success=True,
