@@ -46,7 +46,7 @@ class SecurityHeadersMiddleware:
         self.app = app
 
     # Paths that serve Swagger / ReDoc UI and need relaxed CSP
-    _DOCS_PREFIXES = ("/docs", "/redoc", f"{settings.API_V1_STR}/openapi.json")
+    _DOCS_PREFIXES = ("/docs", "/redoc")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         # Only inject headers for HTTP; let WebSocket pass through untouched.
