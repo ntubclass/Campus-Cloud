@@ -7,6 +7,17 @@ from app.api.deps.auth import (
     get_current_active_superuser,
     get_current_instructor_or_admin,
 )
+from app.core.authorizers import (
+    can_auto_approve_vm_request,
+    can_manage_users,
+    require_ai_api_access,
+    require_group_access,
+    require_immediate_vm_request_access,
+    require_resource_access,
+    require_user_manage,
+    require_vm_request_access,
+    require_vm_request_review,
+)
 from app.core.permissions import (
     Permission,
     has_permission,
@@ -74,3 +85,58 @@ def test_instructor_dependency_accepts_teacher_and_rejects_student() -> None:
     assert get_current_instructor_or_admin(teacher) is teacher
     with pytest.raises(PermissionDeniedError):
         get_current_instructor_or_admin(student)
+
+
+def test_vm_request_authorizers_match_existing_role_rules() -> None:
+    admin = _user(role=UserRole.admin)
+    teacher = _user(role=UserRole.teacher)
+    student = _user(role=UserRole.student)
+
+    assert can_auto_approve_vm_request(admin, mode="scheduled") is True
+    assert can_auto_approve_vm_request(teacher, mode="immediate") is True
+    assert can_auto_approve_vm_request(teacher, mode="scheduled") is False
+    assert can_auto_approve_vm_request(student, mode="immediate") is False
+
+    require_immediate_vm_request_access(teacher)
+    require_vm_request_review(admin)
+    with pytest.raises(PermissionDeniedError):
+        require_immediate_vm_request_access(student)
+    with pytest.raises(PermissionDeniedError):
+        require_vm_request_review(teacher)
+
+
+def test_resource_group_vm_and_ai_access_authorizers() -> None:
+    owner_id = uuid.uuid4()
+    owner = _user(role=UserRole.student, user_id=owner_id)
+    admin = _user(role=UserRole.admin)
+    stranger = _user(role=UserRole.student)
+
+    require_resource_access(owner, owner_id)
+    require_group_access(owner, owner_id)
+    require_vm_request_access(owner, owner_id)
+    require_ai_api_access(owner, owner_id)
+
+    require_resource_access(admin, uuid.uuid4())
+    require_group_access(admin, uuid.uuid4())
+    require_vm_request_access(admin, uuid.uuid4())
+    require_ai_api_access(admin, uuid.uuid4())
+
+    with pytest.raises(PermissionDeniedError):
+        require_resource_access(stranger, owner_id)
+    with pytest.raises(PermissionDeniedError):
+        require_group_access(stranger, owner_id)
+    with pytest.raises(PermissionDeniedError):
+        require_vm_request_access(stranger, owner_id)
+    with pytest.raises(PermissionDeniedError):
+        require_ai_api_access(stranger, owner_id)
+
+
+def test_user_manage_authorizers() -> None:
+    admin = _user(role=UserRole.admin)
+    student = _user(role=UserRole.student)
+
+    assert can_manage_users(admin) is True
+    assert can_manage_users(student) is False
+    require_user_manage(admin)
+    with pytest.raises(PermissionDeniedError):
+        require_user_manage(student)

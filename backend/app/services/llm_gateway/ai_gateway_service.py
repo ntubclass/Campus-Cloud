@@ -11,7 +11,7 @@ from sqlalchemy import and_, or_
 from sqlmodel import Session, select
 
 from app.features.ai.config import settings as ai_api_settings
-from app.core.permissions import Permission, require_owner_or_permission
+from app.core.authorizers import require_ai_api_access
 from app.core.security import decrypt_value, encrypt_value
 from app.exceptions import BadRequestError, NotFoundError
 from app.models import (
@@ -55,12 +55,7 @@ def _get_owned_credential(
     credential = session.get(AIAPICredential, credential_id)
     if not credential:
         raise NotFoundError("AI API credential not found")
-    require_owner_or_permission(
-        current_user,
-        credential.user_id,
-        bypass_permission=Permission.AI_API_VIEW_ALL,
-        detail="Not enough privileges",
-    )
+    require_ai_api_access(current_user, credential.user_id)
     return credential
 
 
@@ -198,12 +193,7 @@ def get_request(
     db_request = session.get(AIAPIRequest, request_id)
     if not db_request:
         raise NotFoundError("AI API request not found")
-    require_owner_or_permission(
-        current_user,
-        db_request.user_id,
-        bypass_permission=Permission.AI_API_VIEW_ALL,
-        detail="Not enough privileges",
-    )
+    require_ai_api_access(current_user, db_request.user_id)
     return _to_request_public(db_request)
 
 

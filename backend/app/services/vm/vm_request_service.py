@@ -4,12 +4,14 @@ from datetime import UTC, datetime, timedelta
 
 from sqlmodel import Session
 
+from app.core.authorizers import (
+    can_auto_approve_vm_request,
+    require_immediate_vm_request_access,
+    require_vm_request_access,
+    require_vm_request_review,
+)
 from app.core.permissions import (
-    Permission,
     is_admin,
-    is_teacher,
-    require_owner_or_permission,
-    require_permission,
 )
 from app.core.security import encrypt_value
 from app.exceptions import (
@@ -193,11 +195,7 @@ def create(
     mode = getattr(request_in, "mode", "scheduled") or "scheduled"
 
     if mode == "immediate":
-        require_permission(
-            user,
-            Permission.VM_REQUEST_USE_IMMEDIATE_MODE,
-            detail="Only admins and teachers can use immediate mode",
-        )
+        require_immediate_vm_request_access(user)
         # Set start_at to now; end_at can be None (infinite) or user-specified.
         request_in.start_at = _utc_now()
         if request_in.end_at is not None:
@@ -241,16 +239,7 @@ def create(
 
     # ---------- role branching ----------
     auto_approved = False
-    if is_admin(user):
-        # Admin/superuser: auto-approve always (both immediate and scheduled)
-        _approve_and_place(
-            session=session,
-            db_request=db_request,
-            reviewer_id=user.id,
-        )
-        auto_approved = True
-    elif is_teacher(user) and mode == "immediate":
-        # Teacher + immediate: auto-approve
+    if can_auto_approve_vm_request(user, mode=mode):
         _approve_and_place(
             session=session,
             db_request=db_request,
@@ -322,12 +311,7 @@ def get(
     )
     if not db_request:
         raise NotFoundError("Request not found")
-    require_owner_or_permission(
-        current_user,
-        db_request.user_id,
-        bypass_permission=Permission.VM_REQUEST_READ_ALL,
-        detail="Not enough privileges",
-    )
+    require_vm_request_access(current_user, db_request.user_id)
     return _to_public(db_request)
 
 
@@ -344,11 +328,7 @@ def get_review_context(
     if not db_request:
         raise NotFoundError("Request not found")
 
-    require_permission(
-        current_user,
-        Permission.VM_REQUEST_REVIEW,
-        detail="Not enough privileges",
-    )
+    require_vm_request_review(current_user)
 
     start_at = db_request.start_at
     end_at = db_request.end_at

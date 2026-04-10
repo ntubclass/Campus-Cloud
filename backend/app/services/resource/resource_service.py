@@ -10,7 +10,7 @@ from app.repositories import vm_request as vm_request_repo
 from app.schemas import ResourcePublic
 from app.repositories import resource as resource_repo
 from app.repositories import audit_log as audit_log_repo
-from app.services.infra import firewall_service
+from app.services.network import firewall_service
 from app.services.proxmox import proxmox_service
 from app.services.user import audit_service
 

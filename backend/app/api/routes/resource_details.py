@@ -12,7 +12,7 @@ from app.schemas import (
     SnapshotInfo,
     SnapshotResponse,
 )
-from app.services.infra import snapshot_service
+from app.services.network import snapshot_service
 from app.services.resource import resource_service
 
 logger = logging.getLogger(__name__)

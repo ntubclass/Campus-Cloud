@@ -26,7 +26,7 @@ from app.infrastructure.ssh import (
 from app.infrastructure.worker import ExpiringStore
 from app.exceptions import ProxmoxError
 from app.models.proxmox_config import ProxmoxConfig
-from app.services.infra import firewall_service
+from app.services.network import firewall_service
 from app.services.proxmox import proxmox_service
 
 logger = logging.getLogger(__name__)

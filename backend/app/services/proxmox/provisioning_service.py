@@ -19,7 +19,7 @@ from app.schemas import (
 from app.ai.pve_advisor import recommendation_service as advisor_service
 from app.repositories import resource as resource_repo
 from app.repositories import vm_request as vm_request_repo
-from app.services.infra import firewall_service
+from app.services.network import firewall_service
 from app.services.proxmox import proxmox_service
 from app.services.user import audit_service
 from app.services.vm import vm_request_placement_service

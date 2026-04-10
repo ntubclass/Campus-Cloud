@@ -14,7 +14,7 @@ import uuid
 
 from sqlmodel import Session
 
-from app.core.permissions import Permission, has_permission
+from app.core.authorizers import can_bypass_resource_ownership
 from app.infrastructure.proxmox import get_proxmox_api, get_proxmox_settings
 from app.exceptions import BadRequestError, NotFoundError, ProxmoxError
 from app.models.user import User
@@ -412,7 +412,7 @@ def create_connection(
 
                 if domain:
                     # 🌐 反向代理（Traefik）
-                    from app.services.infra import reverse_proxy_service  # noqa: PLC0415
+                    from app.services.network import reverse_proxy_service  # noqa: PLC0415
                     reverse_proxy_service.apply_reverse_proxy_rule(
                         session=session,
                         vmid=target_vmid,
@@ -423,7 +423,7 @@ def create_connection(
                     )
                 elif port_spec.external_port is not None:
                     # 🔌 Port 轉發（haproxy）
-                    from app.services.infra import nat_service  # noqa: PLC0415
+                    from app.services.network import nat_service  # noqa: PLC0415
                     nat_service.apply_nat_rule(
                         session=session,
                         vmid=target_vmid,
@@ -590,7 +590,7 @@ def delete_connection(
         )
         # 同步清理 Gateway VM 規則（haproxy + Traefik）
         if session is not None:
-            from app.services.infra import nat_service, reverse_proxy_service  # noqa: PLC0415
+            from app.services.network import nat_service, reverse_proxy_service  # noqa: PLC0415
             if ports is None:
                 nat_service.remove_nat_rules_for_vmid(session, target_vmid)
                 reverse_proxy_service.remove_reverse_proxy_rules_for_vmid(session, target_vmid)
@@ -874,7 +874,7 @@ def get_topology(user: User, session: Session) -> TopologyResponse:
     - 一般使用者: 只看自己的 VM
     """
     # 取得有權限的 user_id 清單
-    if has_permission(user, Permission.RESOURCE_OWNERSHIP_BYPASS):
+    if can_bypass_resource_ownership(user):
         all_resources = resource_repo.get_all_resources(session=session)
         target_vmids = [r.vmid for r in all_resources]
     else:

@@ -5,10 +5,9 @@ from fastapi import Depends
 
 from app.api.deps.auth import CurrentUser
 from app.api.deps.database import SessionDep
-from app.core.permissions import (
-    Permission,
-    has_permission,
-    require_owner_or_permission,
+from app.core.authorizers import (
+    can_bypass_resource_ownership,
+    require_resource_access,
 )
 from app.exceptions import PermissionDeniedError
 from app.repositories import resource as resource_repo
@@ -26,7 +25,7 @@ def check_resource_ownership(
     Check if the current user owns the resource or is a superuser.
     Raises PermissionDeniedError if the user doesn't have permission.
     """
-    if has_permission(current_user, Permission.RESOURCE_OWNERSHIP_BYPASS):
+    if can_bypass_resource_ownership(current_user):
         return
 
     # Check if the resource exists in the database
@@ -42,12 +41,7 @@ def check_resource_ownership(
         )
 
     try:
-        require_owner_or_permission(
-            current_user,
-            db_resource.user_id,
-            bypass_permission=Permission.RESOURCE_OWNERSHIP_BYPASS,
-            detail="You don't have permission to access this resource",
-        )
+        require_resource_access(current_user, db_resource.user_id)
     except PermissionDeniedError:
         logger.warning(
             f"User {current_user.email} attempted to access resource {vmid} "

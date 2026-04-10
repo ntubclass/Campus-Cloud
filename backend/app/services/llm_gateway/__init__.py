@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from importlib import import_module
 
-__all__ = ["ai_api_service"]
+__all__ = ["ai_gateway_service"]
 
 _MODULES = {
-    "ai_api_service": "app.services.llm_gateway.ai_gateway_service",
+    "ai_gateway_service": "app.services.llm_gateway.ai_gateway_service",
 }
 
 

@@ -68,7 +68,7 @@ def _sync_traefik(session: object) -> None:
     from app.repositories import reverse_proxy as rp_repo  # noqa: PLC0415
     from app.repositories.gateway_config import get_decrypted_private_key  # noqa: PLC0415
     from app.infrastructure.ssh import create_key_client, exec_command  # noqa: PLC0415
-    from app.services.infra.gateway_service import TRAEFIK_DYNAMIC_PATH  # noqa: PLC0415
+    from app.services.network.gateway_service import TRAEFIK_DYNAMIC_PATH  # noqa: PLC0415
 
     config = gw_repo.get_gateway_config(session)  # type: ignore[arg-type]
     if config is None or not config.host or not config.encrypted_private_key:

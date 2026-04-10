@@ -21,7 +21,7 @@ from app.schemas.ai_proxy import (
     RateLimitStatusResponse,
     UsageStatsResponse,
 )
-from app.services.ai import ai_api_service
+from app.services.llm_gateway import ai_gateway_service
 
 logger = logging.getLogger(__name__)
 
@@ -83,14 +83,14 @@ async def chat_completions(
     try:
         if request.stream:
             return StreamingResponse(
-                ai_api_service.proxy_to_vllm_chat_completion_stream(
+                ai_gateway_service.proxy_to_vllm_chat_completion_stream(
                     user=user,
                     request_data=request_data,
                 ),
                 media_type="text/event-stream",
             )
         else:
-            result = await ai_api_service.proxy_to_vllm_chat_completion(
+            result = await ai_gateway_service.proxy_to_vllm_chat_completion(
                 user=user,
                 request_data=request_data,
             )
@@ -198,7 +198,7 @@ async def get_my_usage_stats(
     if not start_date:
         start_date = end_date - timedelta(days=30)
 
-    stats = ai_api_service.get_user_usage_stats(
+    stats = ai_gateway_service.get_user_usage_stats(
         session=session, user_id=user.id, start_date=start_date, end_date=end_date
     )
 
