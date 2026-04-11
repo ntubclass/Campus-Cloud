@@ -11,6 +11,7 @@ from app.schemas.pve import (
     FieldReference,
     PVE_API_REFERENCE,
 )
+from app.schemas.chat import ChatRequest, ChatResponse, ToolCallRecord
 
 __all__ = [
     "NodeInfo",
@@ -24,4 +25,7 @@ __all__ = [
     "ApiEndpointReference",
     "FieldReference",
     "PVE_API_REFERENCE",
+    "ChatRequest",
+    "ChatResponse",
+    "ToolCallRecord",
 ]

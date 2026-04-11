@@ -8,6 +8,8 @@ import logging
 from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas import (
+    ChatRequest,
+    ChatResponse,
     ClusterInfo,
     NetworkInterface,
     NodeInfo,
@@ -204,3 +206,35 @@ async def get_cluster() -> ClusterInfo:
 )
 def get_reference() -> list[ApiEndpointReference]:
     return PVE_API_REFERENCE
+
+
+# ---------------------------------------------------------------------------
+# AI 對話（Tool Calling）
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/chat",
+    response_model=ChatResponse,
+    summary="AI 自然語言查詢 PVE",
+    description=(
+        "輸入自然語言問題，AI 自動決定是否呼叫 PVE 工具取得資料，"
+        "再整理成人類可讀的回答。\n\n"
+        "**單次查詢**（不保留對話歷史）。\n\n"
+        "**可用工具：** `get_resources`、`get_nodes`、`get_storage`、"
+        "`get_resource_detail`、`get_cluster`\n\n"
+        "範例問題：\n"
+        "- `列出所有停止的 LXC`\n"
+        "- `哪個節點 CPU 使用率最高？`\n"
+        "- `vmid 100 現在的記憶體用了多少？`\n"
+        "- `local-lvm 還剩多少空間？`"
+    ),
+)
+async def post_chat(body: ChatRequest) -> ChatResponse:
+    from app.services.chat import chat as _chat
+
+    try:
+        return await _chat(body.message)
+    except Exception as exc:
+        logger.error("chat 發生未預期錯誤：%s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc))
