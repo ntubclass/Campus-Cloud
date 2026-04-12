@@ -154,8 +154,9 @@ async def get_resource_statuses(
 @router.get(
     "/resource-configs",
     response_model=list[ResourceConfig],
+    response_model_exclude={"__all__": {"raw"}},
     summary="所有資源設定檔",
-    description="取得所有 VM/LXC 的設定資料（CPU/記憶體配置、磁碟大小、是否開機自啟等）。",
+    description="取得所有 VM/LXC 的設定摘要（CPU/記憶體配置、磁碟大小、是否開機自啟等），預設不包含原始 raw 設定。",
 )
 async def get_resource_configs(
     resource_type: str | None = Query(default=None, description="篩選 qemu 或 lxc"),
