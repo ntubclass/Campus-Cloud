@@ -415,6 +415,7 @@ export type GroupMemberPublic = {
     added_at?: (string | null);
     vmid?: (number | null);
     vm_status?: (string | null);
+    vm_type?: (string | null);
 };
 
 /**

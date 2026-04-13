@@ -110,8 +110,9 @@ def get_group(group_id: uuid.UUID, session: SessionDep, current_user: AdminUser)
     # 取得每個成員最新的 vmid
     member_vmids = group_repo.get_member_vmids(session=session, group_id=group_id)
 
-    # 批量取得所有 VM 的即時狀態（一次 Proxmox API 呼叫）
+    # 批量取得所有 VM 的即時狀態與類型（一次 Proxmox API 呼叫）
     vm_status_map: dict[int, str] = {}
+    vm_type_map: dict[int, str] = {}
     vmids_to_check = [v for v in member_vmids.values() if v is not None]
     if vmids_to_check:
         try:
@@ -119,6 +120,7 @@ def get_group(group_id: uuid.UUID, session: SessionDep, current_user: AdminUser)
             for r in all_resources:
                 if r["vmid"] in vmids_to_check:
                     vm_status_map[r["vmid"]] = r.get("status", "unknown")
+                    vm_type_map[r["vmid"]] = r.get("type", "unknown")
         except Exception:
             logger.warning("無法取得 Proxmox 資源狀態，將略過 VM 狀態欄位")
 
@@ -130,6 +132,9 @@ def get_group(group_id: uuid.UUID, session: SessionDep, current_user: AdminUser)
             added_at=members_map[u.id].added_at if u.id in members_map else None,
             vmid=member_vmids.get(u.id),
             vm_status=vm_status_map.get(member_vmids[u.id])
+            if u.id in member_vmids
+            else None,
+            vm_type=vm_type_map.get(member_vmids[u.id])
             if u.id in member_vmids
             else None,
         )

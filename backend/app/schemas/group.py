@@ -36,6 +36,7 @@ class GroupMemberPublic(BaseModel):
     added_at: datetime | None = None
     vmid: int | None = None
     vm_status: str | None = None  # "running" | "stopped" | None (未開過機器)
+    vm_type: str | None = None  # "qemu" | "lxc" | None
 
 
 class GroupPublic(BaseModel):

@@ -142,27 +142,33 @@ function VmStatusBadge({ vmid, status }: { vmid?: number | null; status?: string
       </span>
     )
   }
-  if (status === "running") {
-    return (
+
+  const inner =
+    status === "running" ? (
       <span className="inline-flex items-center gap-1 text-xs text-green-600">
         <Power className="h-3.5 w-3.5" />
         運行中
       </span>
-    )
-  }
-  if (status === "stopped") {
-    return (
+    ) : status === "stopped" ? (
       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
         <PowerOff className="h-3.5 w-3.5" />
         已關機
       </span>
+    ) : (
+      <span className="inline-flex items-center gap-1 text-xs text-yellow-600">
+        <Monitor className="h-3.5 w-3.5" />
+        {status ?? "未知"}
+      </span>
     )
-  }
+
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-yellow-600">
-      <Monitor className="h-3.5 w-3.5" />
-      {status ?? "未知"}
-    </span>
+    <Link
+      to="/resources/$vmid"
+      params={{ vmid: String(vmid) }}
+      className="hover:opacity-70 transition-opacity"
+    >
+      {inner}
+    </Link>
   )
 }
 
@@ -915,50 +921,73 @@ function GroupDetailContent({ groupId }: { groupId: string }) {
             尚無成員，點擊「加入成員」開始新增
           </p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>姓名</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>VMID</TableHead>
-                <TableHead>VM 狀態</TableHead>
-                <TableHead>加入時間</TableHead>
-                <TableHead className="w-12" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.map((member) => (
-                <TableRow key={member.user_id}>
-                  <TableCell>{member.full_name ?? "-"}</TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {member.vmid ?? (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <VmStatusBadge vmid={member.vmid} status={member.vm_status} />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {member.added_at
-                      ? new Date(member.added_at).toLocaleDateString("zh-TW")
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => removeMutation.mutate(member.user_id)}
-                      disabled={removeMutation.isPending}
-                    >
-                      <UserMinus className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+          <>
+            {/* 統計 bar */}
+            {(() => {
+              const lxcMembers = members.filter((m) => m.vm_type === "lxc" && m.vmid)
+              const vmMembers = members.filter((m) => m.vm_type === "qemu" && m.vmid)
+              const lxcRunning = lxcMembers.filter((m) => m.vm_status === "running").length
+              const vmRunning = vmMembers.filter((m) => m.vm_status === "running").length
+              return (
+                <div className="flex items-center gap-4 mb-3 text-sm">
+                  <span className="text-muted-foreground">
+                    LXC{" "}
+                    <span className="font-semibold text-foreground">
+                      {lxcRunning}/{lxcMembers.length}
+                    </span>
+                  </span>
+                  <span className="text-muted-foreground">
+                    VM{" "}
+                    <span className="font-semibold text-foreground">
+                      {vmRunning}/{vmMembers.length}
+                    </span>
+                  </span>
+                </div>
+              )
+            })()}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>姓名</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>VMID</TableHead>
+                  <TableHead>VM 狀態</TableHead>
+                  <TableHead>加入時間</TableHead>
+                  <TableHead className="w-12" />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {members.map((member) => (
+                  <TableRow key={member.user_id}>
+                    <TableCell>{member.full_name ?? "-"}</TableCell>
+                    <TableCell>{member.email}</TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {member.vmid ?? "-"}
+                    </TableCell>
+                    <TableCell>
+                      <VmStatusBadge vmid={member.vmid} status={member.vm_status} />
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {member.added_at
+                        ? new Date(member.added_at).toLocaleDateString("zh-TW")
+                        : "-"}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => removeMutation.mutate(member.user_id)}
+                        disabled={removeMutation.isPending}
+                      >
+                        <UserMinus className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </>
         )}
       </div>
     </div>

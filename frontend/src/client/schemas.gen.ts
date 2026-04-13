@@ -1494,6 +1494,17 @@ export const GroupMemberPublicSchema = {
                 }
             ],
             title: 'Vm Status'
+        },
+        vm_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Vm Type'
         }
     },
     type: 'object',
