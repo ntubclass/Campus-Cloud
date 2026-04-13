@@ -973,7 +973,19 @@ def _ensure_request_running(
         # Full provision: mark provisioning → clone outside txn → mark running.
         # _provision_new_resource manages its own sessions/commits.
         _provision_new_resource(session=session, request=locked)
-        return True, migrations_used
+        refreshed = vm_request_repo.get_vm_request_by_id(
+            session=session,
+            request_id=locked.id,
+        )
+        started = bool(
+            refreshed is not None
+            and refreshed.vmid is not None
+            and refreshed.status in (
+                VMRequestStatus.provisioning,
+                VMRequestStatus.running,
+            )
+        )
+        return started, migrations_used
 
     # ---- Already provisioned → ensure VM is started ----------------------
     actual_node, _ = _refresh_actual_node(session=session, request=request)
