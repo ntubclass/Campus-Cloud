@@ -7,9 +7,29 @@ from pydantic import BaseModel, Field
 
 class ReverseProxyRuleCreate(BaseModel):
     vmid: int = Field(gt=0)
-    domain: str = Field(min_length=1, max_length=255)
+    zone_id: str = Field(min_length=1, max_length=64)
+    hostname_prefix: str = Field(default="", max_length=190)
     internal_port: int = Field(ge=1, le=65535)
     enable_https: bool = True
+
+
+class ReverseProxyRuleUpdate(ReverseProxyRuleCreate):
+    pass
+
+
+class ReverseProxyZoneOption(BaseModel):
+    id: str
+    name: str
+
+
+class ReverseProxySetupContext(BaseModel):
+    enabled: bool
+    gateway_ready: bool
+    cloudflare_ready: bool
+    reasons: list[str] = Field(default_factory=list)
+    zones: list[ReverseProxyZoneOption] = Field(default_factory=list)
+    default_dns_target_type: str | None = None
+    default_dns_target_value: str | None = None
 
 
 class ReverseProxyRuntimeSection(BaseModel):
@@ -30,6 +50,9 @@ class ReverseProxyRuntimeSnapshot(BaseModel):
 
 __all__ = [
     "ReverseProxyRuleCreate",
+    "ReverseProxyRuleUpdate",
+    "ReverseProxyZoneOption",
+    "ReverseProxySetupContext",
     "ReverseProxyRuntimeSection",
     "ReverseProxyRuntimeSnapshot",
 ]

@@ -9,6 +9,7 @@ import {
   HelpCircle,
   Loader2,
   Lock,
+  Pencil,
   Plus,
   RefreshCw,
   ShieldCheck,
@@ -32,6 +33,7 @@ import useAuth from "@/hooks/useAuth"
 import {
   type ManagedReverseProxyRule,
   ReverseProxyApiService,
+  type ReverseProxySetupContext,
 } from "@/services/reverseProxy"
 
 function isAdminUser(
@@ -56,12 +58,16 @@ function formatDateTime(value: string) {
 function RuleCard({
   rule,
   isDeleting,
+  actionsDisabled,
   onDelete,
+  onEdit,
   onVisit,
 }: {
   rule: ManagedReverseProxyRule
   isDeleting: boolean
+  actionsDisabled: boolean
   onDelete: () => void
+  onEdit: () => void
   onVisit: () => void
 }) {
   const scheme = rule.enable_https ? "https" : "http"
@@ -148,7 +154,16 @@ function RuleCard({
         <Button
           variant="outline"
           size="sm"
-          disabled={isDeleting}
+          disabled={actionsDisabled}
+          onClick={onEdit}
+        >
+          <Pencil className="mr-2 h-3.5 w-3.5" />
+          編輯規則
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isDeleting || actionsDisabled}
           onClick={onDelete}
           className="text-destructive hover:bg-destructive/10 hover:text-destructive"
         >
@@ -164,7 +179,13 @@ function RuleCard({
   )
 }
 
-function EmptyState({ onAdd }: { onAdd: () => void }) {
+function EmptyState({
+  onAdd,
+  disabled,
+}: {
+  onAdd: () => void
+  disabled: boolean
+}) {
   return (
     <div className="flex flex-col items-center rounded-2xl border-2 border-dashed border-border/60 bg-muted/20 px-6 py-16 text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-sky-500/10">
@@ -178,7 +199,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         app.example.edu.tw）直接訪問你 VM
         裡跑的網站或服務，不需要記 IP 和 Port。
       </p>
-      <Button className="mt-6" size="lg" onClick={onAdd}>
+      <Button className="mt-6" size="lg" onClick={onAdd} disabled={disabled}>
         <Plus className="mr-2 h-4 w-4" />
         新增第一個網域
       </Button>
@@ -214,8 +235,7 @@ function HowItWorksSection() {
                 <div className="text-2xl">1</div>
                 <p className="mt-2 font-medium text-foreground">設定網域</p>
                 <p className="mt-1">
-                  輸入你想用的網域名稱（需先在 DNS 指向本平台），選擇要綁定的
-                  VM 和 Port。
+                  輸入主機名前綴、選擇 Cloudflare Zone，並指定要綁定的 VM 和 Port。
                 </p>
               </div>
               <div className="rounded-xl bg-muted/50 p-4">
@@ -248,7 +268,7 @@ function HowItWorksSection() {
                   Flask 預設 5000、Nginx 預設 80）
                 </li>
                 <li>
-                  你的網域需要在 DNS 設定中指向本平台的 IP（請洽管理員取得 IP）
+                  管理員需要先在 Cloudflare 網域管理設定預設 A/CNAME 指向與可用 Zone
                 </li>
               </ul>
             </div>
@@ -274,9 +294,19 @@ function ReverseProxyPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editingRule, setEditingRule] = useState<ManagedReverseProxyRule | null>(null)
   const [showAdminPanel, setShowAdminPanel] = useState(false)
 
   const isAdmin = isAdminUser(user)
+
+  const setupContextQuery = useQuery({
+    queryKey: ["reverse-proxy-setup-context"],
+    queryFn: () => ReverseProxyApiService.getSetupContext(),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+    staleTime: 15_000,
+    retry: false,
+  })
 
   const rulesQuery = useQuery({
     queryKey: ["reverse-proxy-rules"],
@@ -309,9 +339,23 @@ function ReverseProxyPage() {
     },
   })
 
+  const setupContext = setupContextQuery.data as ReverseProxySetupContext | undefined
+  const actionsDisabled = setupContext?.enabled === false || setupContextQuery.isError
+  const automationTarget =
+    setupContext?.default_dns_target_type && setupContext.default_dns_target_value
+      ? `${setupContext.default_dns_target_type} ${setupContext.default_dns_target_value}`
+      : null
   const rules = (rulesQuery.data ?? []) as ManagedReverseProxyRule[]
 
+  const refreshAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["reverse-proxy-rules"] })
+    queryClient.invalidateQueries({ queryKey: ["reverse-proxy-setup-context"] })
+  }
+
   const handleDeleteRule = (rule: ManagedReverseProxyRule) => {
+    if (actionsDisabled) {
+      return
+    }
     const confirmed = window.confirm(
       `確定要刪除「${rule.domain}」這個網域規則嗎？\n\n刪除後，透過這個網址將無法再訪問你的 VM。`,
     )
@@ -340,11 +384,7 @@ function ReverseProxyPage() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => {
-                      queryClient.invalidateQueries({
-                        queryKey: ["reverse-proxy-rules"],
-                      })
-                    }}
+                    onClick={refreshAll}
                   >
                     <RefreshCw className="h-4 w-4" />
                   </Button>
@@ -358,7 +398,7 @@ function ReverseProxyPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => syncRulesMutation.mutate()}
-                      disabled={syncRulesMutation.isPending}
+                      disabled={syncRulesMutation.isPending || actionsDisabled}
                     >
                       {syncRulesMutation.isPending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -373,7 +413,13 @@ function ReverseProxyPage() {
                   </TooltipContent>
                 </Tooltip>
               )}
-              <Button onClick={() => setCreateDialogOpen(true)}>
+              <Button
+                onClick={() => {
+                  setEditingRule(null)
+                  setCreateDialogOpen(true)
+                }}
+                disabled={actionsDisabled}
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 新增網域
               </Button>
@@ -397,11 +443,47 @@ function ReverseProxyPage() {
                 更新中
               </Badge>
             )}
+            {automationTarget && (
+              <Badge
+                variant="outline"
+                className="rounded-full border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300"
+              >
+                自動 DNS → {automationTarget}
+              </Badge>
+            )}
           </div>
         </section>
 
         {/* 說明區塊 */}
         <HowItWorksSection />
+
+        {setupContextQuery.isError && (
+          <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm">
+            <div className="flex items-start gap-3 text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <div className="font-medium">無法確認反向代理前置條件</div>
+                <div className="mt-1 text-amber-700/80 dark:text-amber-200/80">
+                  目前將暫時停用新增、編輯與刪除操作，請稍後重新整理或聯繫管理員。
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {setupContext?.enabled === false && (
+          <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm">
+            <div className="flex items-start gap-3 text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <div className="font-medium">反向代理功能目前不可用</div>
+                <div className="mt-1 text-amber-700/80 dark:text-amber-200/80">
+                  {(setupContext.reasons ?? []).join("；")}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 錯誤提示 */}
         {rulesQuery.isError && (
@@ -424,7 +506,13 @@ function ReverseProxyPage() {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : rules.length === 0 ? (
-          <EmptyState onAdd={() => setCreateDialogOpen(true)} />
+          <EmptyState
+            onAdd={() => {
+              setEditingRule(null)
+              setCreateDialogOpen(true)
+            }}
+            disabled={actionsDisabled}
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {rules.map((rule) => (
@@ -432,7 +520,12 @@ function ReverseProxyPage() {
                 key={rule.id}
                 rule={rule}
                 isDeleting={deleteRuleMutation.isPending}
+                actionsDisabled={actionsDisabled}
                 onDelete={() => handleDeleteRule(rule)}
+                onEdit={() => {
+                  setEditingRule(rule)
+                  setCreateDialogOpen(true)
+                }}
                 onVisit={() =>
                   window.open(
                     `${rule.enable_https ? "https" : "http"}://${rule.domain}`,
@@ -472,12 +565,17 @@ function ReverseProxyPage() {
 
         <CreateReverseProxyRuleDialog
           open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
-          onCreated={() => {
-            queryClient.invalidateQueries({
-              queryKey: ["reverse-proxy-rules"],
-            })
+          onOpenChange={(open) => {
+            setCreateDialogOpen(open)
+            if (!open) {
+              setEditingRule(null)
+            }
           }}
+          onCompleted={() => {
+            refreshAll()
+          }}
+          setupContext={setupContext}
+          rule={editingRule}
         />
       </div>
     </TooltipProvider>

@@ -25,6 +25,7 @@ export type ManagedReverseProxyRule = {
   vmid: number
   vm_ip: string
   domain: string
+  zone_id?: string | null
   internal_port: number
   enable_https: boolean
   dns_provider: string
@@ -33,9 +34,25 @@ export type ManagedReverseProxyRule = {
 
 export type ReverseProxyRuleCreateInput = {
   vmid: number
-  domain: string
+  zone_id: string
+  hostname_prefix: string
   internal_port: number
   enable_https: boolean
+}
+
+export type ReverseProxyZoneOption = {
+  id: string
+  name: string
+}
+
+export type ReverseProxySetupContext = {
+  enabled: boolean
+  gateway_ready: boolean
+  cloudflare_ready: boolean
+  reasons: string[]
+  zones: ReverseProxyZoneOption[]
+  default_dns_target_type?: string | null
+  default_dns_target_value?: string | null
 }
 
 export const ReverseProxyApiService = {
@@ -53,6 +70,13 @@ export const ReverseProxyApiService = {
     })
   },
 
+  getSetupContext(): CancelablePromise<ReverseProxySetupContext> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/reverse-proxy/setup-context",
+    })
+  },
+
   createRule(
     requestBody: ReverseProxyRuleCreateInput,
   ): CancelablePromise<{ message: string }> {
@@ -60,6 +84,19 @@ export const ReverseProxyApiService = {
       method: "POST",
       url: "/api/v1/reverse-proxy/rules",
       body: requestBody,
+      mediaType: "application/json",
+    })
+  },
+
+  updateRule(data: {
+    ruleId: string
+    requestBody: ReverseProxyRuleCreateInput
+  }): CancelablePromise<{ message: string }> {
+    return __request(OpenAPI, {
+      method: "PUT",
+      url: "/api/v1/reverse-proxy/rules/{rule_id}",
+      path: { rule_id: data.ruleId },
+      body: data.requestBody,
       mediaType: "application/json",
     })
   },

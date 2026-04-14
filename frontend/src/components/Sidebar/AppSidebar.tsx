@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
+  Cloud,
   FileText,
   Globe,
   Home,
@@ -75,6 +76,7 @@ export function AppSidebar() {
       title: "Migration Jobs",
       path: "/admin/migration-jobs",
     },
+    { icon: Cloud, title: "網域管理", path: "/admin/domains" },
     { icon: Network, title: "Gateway VM", path: "/admin/gateway" },
     { icon: ScrollText, title: "稽核日誌", path: "/admin/audit-logs" },
   ]

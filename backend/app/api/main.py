@@ -7,6 +7,7 @@ from app.api.routes import (
     ai_template_recommendation,
     audit_logs,
     batch_provision,
+    cloudflare,
     firewall,
     gateway,
     groups,
@@ -46,6 +47,7 @@ api_router.include_router(audit_logs.router)
 api_router.include_router(groups.router)
 api_router.include_router(batch_provision.router)
 api_router.include_router(proxmox_config.router)
+api_router.include_router(cloudflare.router)
 api_router.include_router(firewall.router)
 api_router.include_router(reverse_proxy.router)
 api_router.include_router(gateway.router)

@@ -10,6 +10,7 @@ const ACCESS_TOKEN_KEY = "access_token"
 const REFRESH_TOKEN_KEY = "refresh_token"
 
 let _refreshPromise: Promise<boolean> | null = null
+let _lastSuccessfulRefreshAt = 0
 
 export const AuthSessionService = {
   getAccessToken() {
@@ -34,6 +35,14 @@ export const AuthSessionService = {
   clearTokens() {
     localStorage.removeItem(ACCESS_TOKEN_KEY)
     localStorage.removeItem(REFRESH_TOKEN_KEY)
+    _lastSuccessfulRefreshAt = 0
+  },
+
+  wasRefreshedRecently(windowMs = 3000) {
+    return (
+      _lastSuccessfulRefreshAt > 0 &&
+      Date.now() - _lastSuccessfulRefreshAt <= windowMs
+    )
   },
 
   async loginWithGoogle(idToken: string): Promise<AuthTokens> {
@@ -62,6 +71,7 @@ export const AuthSessionService = {
           mediaType: "application/json",
         })
         this.setTokens(tokens)
+        _lastSuccessfulRefreshAt = Date.now()
         return true
       } catch {
         return false
