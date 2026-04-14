@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # 7 days
     FRONTEND_HOST: str = "http://localhost:5173"
+    # Public base URL of the backend API as seen by desktop clients.
+    # Defaults to http://localhost:8000 when unset (override in .env for deploys).
+    DESKTOP_CLIENT_BACKEND_URL: str = "http://localhost:8000"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
     BACKEND_CORS_ORIGINS: Annotated[
@@ -95,6 +98,12 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER_PASSWORD: str
 
     GOOGLE_CLIENT_ID: str | None = None
+    GOOGLE_CLIENT_SECRET: str | None = None
+
+    # frp tunnel settings
+    FRP_SERVER_ADDR: str = ""   # public IP/domain that desktop clients connect to
+    FRP_SERVER_PORT: int = 7000
+    FRP_TOKEN: str = ""
 
     PROXMOX_HOST: str = "localhost"
     PROXMOX_USER: str = ""

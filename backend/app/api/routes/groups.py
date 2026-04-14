@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from app.api.deps import AdminUser, SessionDep
+from app.api.deps import InstructorUser, SessionDep
 from app.core.authorizers import (
     can_bypass_group_ownership,
     require_group_access,
@@ -46,7 +46,7 @@ def _check_group_access(current_user, db_group) -> None:
 def create_group(
     group_in: GroupCreate,
     session: SessionDep,
-    current_user: AdminUser,
+    current_user: InstructorUser,
 ):
     db_group = group_repo.create_group(
         session=session,
@@ -72,7 +72,7 @@ def create_group(
 
 
 @router.get("/", response_model=GroupsPublic)
-def list_groups(session: SessionDep, current_user: AdminUser):
+def list_groups(session: SessionDep, current_user: InstructorUser):
     if can_bypass_group_ownership(current_user):
         groups = group_repo.get_all_groups(session=session)
     else:
@@ -97,7 +97,9 @@ def list_groups(session: SessionDep, current_user: AdminUser):
 
 
 @router.get("/{group_id}", response_model=GroupDetailPublic)
-def get_group(group_id: uuid.UUID, session: SessionDep, current_user: AdminUser):
+def get_group(
+    group_id: uuid.UUID, session: SessionDep, current_user: InstructorUser
+):
     db_group = group_repo.get_group_by_id(session=session, group_id=group_id)
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -152,7 +154,9 @@ def get_group(group_id: uuid.UUID, session: SessionDep, current_user: AdminUser)
 
 
 @router.delete("/{group_id}", response_model=Message)
-def delete_group(group_id: uuid.UUID, session: SessionDep, current_user: AdminUser):
+def delete_group(
+    group_id: uuid.UUID, session: SessionDep, current_user: InstructorUser
+):
     db_group = group_repo.get_group_by_id(session=session, group_id=group_id)
     if not db_group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -173,7 +177,7 @@ def add_members(
     group_id: uuid.UUID,
     body: GroupMemberAdd,
     session: SessionDep,
-    current_user: AdminUser,
+    current_user: InstructorUser,
 ):
     db_group = group_repo.get_group_by_id(session=session, group_id=group_id)
     if not db_group:
@@ -205,7 +209,7 @@ def remove_member(
     group_id: uuid.UUID,
     user_id: uuid.UUID,
     session: SessionDep,
-    current_user: AdminUser,
+    current_user: InstructorUser,
 ):
     db_group = group_repo.get_group_by_id(session=session, group_id=group_id)
     if not db_group:
@@ -231,7 +235,7 @@ def remove_member(
 async def import_members_from_csv(
     group_id: uuid.UUID,
     session: SessionDep,
-    current_user: AdminUser,
+    current_user: InstructorUser,
     file: UploadFile = File(...),
 ):
     """從 CSV 大量匯入學生帳號並加入群組。

@@ -7,6 +7,7 @@ from app.api.routes import (
     ai_template_recommendation,
     audit_logs,
     batch_provision,
+    desktop_client,
     firewall,
     gateway,
     groups,
@@ -20,6 +21,7 @@ from app.api.routes import (
     rubric,
     script_deploy,
     spec_change_requests,
+    tunnel,
     users,
     utils,
     vm,
@@ -50,6 +52,8 @@ api_router.include_router(firewall.router)
 api_router.include_router(gateway.router)
 api_router.include_router(script_deploy.router)
 api_router.include_router(rubric.router)
+api_router.include_router(tunnel.router)
+api_router.include_router(desktop_client.router)
 
 
 if settings.ENVIRONMENT == "local":
