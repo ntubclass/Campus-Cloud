@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useTheme } from "../../contexts/ThemeContext";
+import { useAuth }  from "../../contexts/AuthContext";
 import styles from "./Sidebar.module.scss";
 
 const MIcon = ({ name, size = 22 }) => (
@@ -156,7 +157,7 @@ function SelectPopup({ options, value, onSelect, onClose, triggerRef }) {
   );
 }
 
-function UserPopup({ onClose, triggerRef }) {
+function UserPopup({ user, onLogout, onClose, triggerRef }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -172,10 +173,12 @@ function UserPopup({ onClose, triggerRef }) {
   return (
     <div className={styles.userPopup} ref={ref}>
       <div className={styles.userPopupHeader}>
-        <div className={styles.userPopupAvatar}>L</div>
+        <div className={styles.userPopupAvatar}>
+          {user?.full_name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U"}
+        </div>
         <div className={styles.userPopupInfo}>
-          <span className={styles.userName}>lianqianyi</span>
-          <span className={styles.userEmail}>11156023@ntub.edu.tw</span>
+          <span className={styles.userName}>{user?.full_name ?? "—"}</span>
+          <span className={styles.userEmail}>{user?.email ?? "—"}</span>
         </div>
       </div>
       <div className={styles.userPopupDivider} />
@@ -183,7 +186,11 @@ function UserPopup({ onClose, triggerRef }) {
         <MIcon name="settings" size={18} />
         <span>User Settings</span>
       </button>
-      <button type="button" className={`${styles.userPopupItem} ${styles.userPopupItemDanger}`} onClick={onClose}>
+      <button
+        type="button"
+        className={`${styles.userPopupItem} ${styles.userPopupItemDanger}`}
+        onClick={() => { onClose(); onLogout(); }}
+      >
         <MIcon name="logout" size={18} />
         <span>Log Out</span>
       </button>
@@ -213,6 +220,7 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onClose, acti
   const langBtnRef = useRef(null);
   const userBtnRef = useRef(null);
   const { mode, setMode } = useTheme();
+  const { user, logout } = useAuth();
 
   const cls = [
     styles.sidebar,
@@ -308,6 +316,8 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onClose, acti
         <div className={styles.appearanceWrap}>
           {userOpen && (
             <UserPopup
+              user={user}
+              onLogout={logout}
               onClose={() => setUserOpen(false)}
               triggerRef={userBtnRef}
             />
@@ -317,14 +327,16 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onClose, acti
             type="button"
             className={`${styles.user} ${userOpen ? styles.userActive : ""}`}
             onClick={() => setUserOpen((o) => !o)}
-            title={collapsed ? "lianqianyi" : undefined}
+            title={collapsed ? (user?.full_name ?? user?.email) : undefined}
           >
-            <div className={styles.avatar}>L</div>
+            <div className={styles.avatar}>
+              {user?.full_name?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? "U"}
+            </div>
             {!collapsed && (
               <>
                 <div className={styles.userInfo}>
-                  <span className={styles.userName}>lianqianyi</span>
-                  <span className={styles.userEmail}>11156023@ntub.edu.tw</span>
+                  <span className={styles.userName}>{user?.full_name ?? "—"}</span>
+                  <span className={styles.userEmail}>{user?.email ?? "—"}</span>
                 </div>
                 <MIcon name={userOpen ? "expand_more" : "unfold_more"} size={16} />
               </>
