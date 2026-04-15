@@ -114,10 +114,6 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onClose }) {
         </div>
       </div>
 
-      {/* ===== Footer ===== */}
-      <div className={styles.footer}>
-        {collapsed ? "CC" : "Campus Cloud · 2026"}
-      </div>
     </aside>
   );
 }

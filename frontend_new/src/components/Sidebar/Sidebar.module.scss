@@ -1,10 +1,9 @@
 /* ===== Sidebar ===== */
 .sidebar {
   position: fixed;
-  top: 12px;
-  left: 12px;
-  height: calc(100vh - 24px);
-  height: calc(100dvh - 24px);
+  top: 20px;
+  left: 20px;
+  bottom: 20px;
   width: $sidebar-width;
   background: var(--color-sidebar-glass);
   backdrop-filter: blur(16px) saturate(1.6);
@@ -26,12 +25,15 @@
 
   @include respond-to(md) {
     position: sticky;
-    top: 12px;
-    height: calc(100vh - 24px);
-    height: calc(100dvh - 24px);
+    top: var(--layout-py);
+    left: auto;
+    bottom: auto;
+    height: calc(100vh - var(--layout-py) * 2);
+    height: calc(100dvh - var(--layout-py) * 2);
     transform: none;
     z-index: auto;
-    align-self: flex-start;
+    align-self: stretch;
+    flex-shrink: 0;
 
     &.collapsed {
       width: $sidebar-width-collapsed;
@@ -188,13 +190,4 @@
   font-size: 11px;
   color: var(--color-text-muted);
   @include text-truncate;
-}
-
-/* ===== Footer ===== */
-.footer {
-  padding: $spacing-sm $spacing-md $spacing-md;
-  font-size: 11px;
-  color: var(--color-text-muted);
-  text-align: center;
-  white-space: nowrap;
 }

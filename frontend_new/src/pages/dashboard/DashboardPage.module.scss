@@ -3,16 +3,10 @@
   flex: 1;
   @include flex-column;
   position: relative;
-  padding: $spacing-lg $spacing-md;
   padding-top: 60px; // 手機版留漢堡按鈕空間
 
-  @include respond-to(sm) {
-    padding: $spacing-xl $spacing-lg;
-    padding-top: 60px;
-  }
-
   @include respond-to(md) {
-    padding: $content-padding;
+    padding-top: 0;
   }
 }
 

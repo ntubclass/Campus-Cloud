@@ -34,6 +34,7 @@ export default function DashboardLayout({ children }) {
           </span>
         </button>
         {children}
+        <div className={styles.footer}>Campus Cloud · 2026</div>
       </main>
     </div>
   );

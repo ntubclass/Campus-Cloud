@@ -1,8 +1,13 @@
 .layout {
+  --layout-py: 40px;
+  --layout-px: 60px;
+
   display: flex;
   flex: 1;
   min-height: 100vh;
   min-height: 100dvh;
+  gap: 20px;
+  padding: var(--layout-py) var(--layout-px);
 }
 
 /* Mobile overlay */
@@ -23,15 +28,15 @@
   min-width: 0;
   @include flex-column;
   position: relative;
+  padding-left: 20px;
+}
 
-  @include respond-to(md) {
-    margin-left: calc(#{$sidebar-width} + 12px);
-    transition: margin-left 0.25s ease;
-
-    .collapsed & {
-      margin-left: calc(#{$sidebar-width-collapsed} + 12px);
-    }
-  }
+/* Footer */
+.footer {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-align: left;
+  margin-top: auto;
 }
 
 /* Mobile hamburger */
