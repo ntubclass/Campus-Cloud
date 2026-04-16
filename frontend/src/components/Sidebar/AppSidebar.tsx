@@ -49,7 +49,7 @@ export function AppSidebar() {
     { icon: ServerCog, title: t("sidebar.myResources"), path: "/my-resources" },
     { icon: Shield, title: "防火牆", path: "/firewall" },
     { icon: Globe, title: "反向代理", path: "/reverse-proxy" },
-    { icon: Cpu, title: "GPU 管理", path: "/gpu-management" },
+    { icon: Cpu, title: t("sidebar.gpuManagement"), path: "/gpu-management" },
   ]
 
   const aiItems: Item[] = [{ icon: Bot, title: "AI API", path: "/ai-api" }]
