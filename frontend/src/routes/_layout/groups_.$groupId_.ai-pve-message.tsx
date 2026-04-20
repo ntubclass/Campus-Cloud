@@ -1,19 +1,18 @@
-import { FormEvent, useMemo, useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { ArrowLeft, Bot, MessageSquare, Send, Wrench } from "lucide-react"
+import { type FormEvent, useMemo, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
+import { AiPveLogService, type ToolCallRecord } from "@/features/ai-pve-log/api"
 import { requireGroupManagerUser } from "@/features/auth/guards"
-import {
-  AiPveLogService,
-  type ToolCallRecord,
-} from "@/features/ai-pve-log/api"
 import useCustomToast from "@/hooks/useCustomToast"
 
-export const Route = createFileRoute("/_layout/groups_/$groupId_/ai-pve-message")({
+export const Route = createFileRoute(
+  "/_layout/groups_/$groupId_/ai-pve-message",
+)({
   component: AiPveMessagePage,
   beforeLoad: () => requireGroupManagerUser(),
   head: () => ({
@@ -127,7 +126,9 @@ function AiPveMessagePage() {
                   )}
                   {msg.role === "assistant" ? "AI-PVE" : "你"}
                 </div>
-                <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                <p className="whitespace-pre-wrap leading-relaxed">
+                  {msg.content}
+                </p>
                 {msg.tools && msg.tools.length > 0 && (
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -135,7 +136,10 @@ function AiPveMessagePage() {
                       本次工具呼叫
                     </span>
                     {msg.tools.map((tool, toolIndex) => (
-                      <Badge key={`${tool.name}-${toolIndex}`} variant="secondary">
+                      <Badge
+                        key={`${tool.name}-${toolIndex}`}
+                        variant="secondary"
+                      >
                         {tool.name}
                       </Badge>
                     ))}

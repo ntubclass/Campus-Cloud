@@ -2,7 +2,6 @@
  * AI Judge Page - AI-powered rubric analysis and refinement
  */
 
-import { useCallback, useState } from "react"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import {
   ArrowLeft,
@@ -11,17 +10,17 @@ import {
   Plus,
   Sparkles,
 } from "lucide-react"
+import { useCallback, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { requireGroupManagerUser } from "@/features/auth/guards"
 import {
   AiJudgeService,
-  downloadBlob,
-  rubricToContext,
   type ChatMessage,
+  downloadBlob,
   type RubricAnalysis,
   type RubricItem,
+  rubricToContext,
 } from "@/features/ai-judge/api"
 import {
   ChatPanel,
@@ -29,6 +28,7 @@ import {
   RubricStats,
   RubricUploader,
 } from "@/features/ai-judge/components"
+import { requireGroupManagerUser } from "@/features/auth/guards"
 import useCustomToast from "@/hooks/useCustomToast"
 
 // ─── Route ────────────────────────────────────────────────────────────────────
@@ -225,7 +225,7 @@ function AiJudgePage() {
       {/* Main content */}
       {!analysis ? (
         /* Upload section */
-        (<Card>
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5" />
@@ -235,10 +235,10 @@ function AiJudgePage() {
           <CardContent>
             <RubricUploader onUpload={handleUpload} isLoading={isUploading} />
           </CardContent>
-        </Card>)
+        </Card>
       ) : (
         /* Analysis results */
-        (<div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+        <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
           {/* Left: Rubric items */}
           <div className="space-y-4">
             {/* Stats */}
@@ -297,7 +297,7 @@ function AiJudgePage() {
               />
             </CardContent>
           </Card>
-        </div>)
+        </div>
       )}
     </div>
   )
