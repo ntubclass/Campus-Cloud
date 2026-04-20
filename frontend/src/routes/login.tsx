@@ -73,7 +73,7 @@ export const Route = createFileRoute("/login")({
 
 async function approveDeviceCode(deviceCode: string): Promise<boolean> {
   try {
-    const token =
+    const resolvedToken =
       typeof OpenAPI.TOKEN === "function"
         ? await (
             OpenAPI.TOKEN as (options: { method: string; url: string }) => Promise<string>
@@ -81,7 +81,12 @@ async function approveDeviceCode(deviceCode: string): Promise<boolean> {
             method: "POST",
             url: "/api/v1/desktop-client/auth/approve",
           })
-        : (OpenAPI.TOKEN as string)
+        : (OpenAPI.TOKEN as string | undefined)
+    const token = resolvedToken || localStorage.getItem("access_token")
+    if (!token) {
+      console.warn("[approveDeviceCode] no access_token in localStorage")
+      return false
+    }
     const resp = await fetch(
       `${OpenAPI.BASE}/api/v1/desktop-client/auth/approve`,
       {
@@ -93,8 +98,13 @@ async function approveDeviceCode(deviceCode: string): Promise<boolean> {
         body: JSON.stringify({ device_code: deviceCode }),
       },
     )
+    if (!resp.ok) {
+      const body = await resp.text()
+      console.warn("[approveDeviceCode] failed", resp.status, body)
+    }
     return resp.ok
-  } catch {
+  } catch (err) {
+    console.warn("[approveDeviceCode] error", err)
     return false
   }
 }
@@ -109,8 +119,8 @@ function Login() {
   const { loginMutation, googleLoginMutation } = useAuth({
     onLoginSuccess: deviceCode
       ? async () => {
-          await approveDeviceCode(deviceCode)
-          setDeviceApproved(true)
+          const ok = await approveDeviceCode(deviceCode)
+          if (ok) setDeviceApproved(true)
           return true // prevent navigate to "/"
         }
       : undefined,
