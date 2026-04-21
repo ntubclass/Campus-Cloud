@@ -1056,7 +1056,8 @@ function GroupDetailContent({ groupId }: { groupId: string }) {
         </h2>
         {!canOpenAdminResourceDetail && (
           <p className="mb-3 text-xs text-muted-foreground">
-            教師檢視模式：僅提供 VM 狀態與即時資源摘要，不會直接導向管理員資源詳情頁。
+            教師檢視模式：僅提供 VM
+            狀態與即時資源摘要，不會直接導向管理員資源詳情頁。
           </p>
         )}
         {members.length === 0 ? (
