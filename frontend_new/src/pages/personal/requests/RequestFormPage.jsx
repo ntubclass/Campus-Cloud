@@ -640,12 +640,8 @@ export default function RequestFormPage({ onBack, className }) {
 
             {/* ── 申請原因 ── */}
             <div className={styles.formSection}>
-              <h2 className={styles.sectionTitle}>申請原因</h2>
-              <FieldGroup
-                label="請描述您的申請用途"
-                required
-                error={errors.reason}
-              >
+              <h2 className={styles.sectionTitle}>申請原因<span className={styles.required}> *</span></h2>
+              <FieldGroup error={errors.reason}>
                 <textarea
                   className={styles.textarea}
                   placeholder="請描述您的申請用途..."
