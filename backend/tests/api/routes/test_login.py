@@ -93,6 +93,8 @@ def test_reset_password(client: TestClient, db: Session) -> None:
         is_superuser=False,
     )
     user = create_user(session=db, user_create=user_create)
+    db.commit()
+    db.refresh(user)
     token = generate_password_reset_token(email=email)
     headers = user_authentication_headers(client=client, email=email, password=password)
     data = {"new_password": new_password, "token": token}

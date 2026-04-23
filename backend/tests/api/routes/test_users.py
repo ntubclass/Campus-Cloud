@@ -65,6 +65,8 @@ def test_get_existing_user_as_superuser(
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
     user = user_repo.create_user(session=db, user_create=user_in)
+    db.commit()
+    db.refresh(user)
     user_id = user.id
     r = client.get(
         f"{settings.API_V1_STR}/users/{user_id}",
@@ -93,6 +95,8 @@ def test_get_existing_user_current_user(client: TestClient, db: Session) -> None
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
     user = user_repo.create_user(session=db, user_create=user_in)
+    db.commit()
+    db.refresh(user)
     user_id = user.id
 
     login_data = {
