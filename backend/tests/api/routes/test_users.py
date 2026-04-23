@@ -13,6 +13,21 @@ from tests.utils.user import create_random_user
 from tests.utils.utils import random_email, random_lower_string
 
 
+def _refresh_superuser_token(
+    client: TestClient, headers: dict[str, str], password: str
+) -> None:
+    """Re-login as FIRST_SUPERUSER and mutate `headers` in place.
+
+    Needed after any operation that bumps the superuser's ``token_version``
+    (e.g. password change), so module-scoped fixtures keep a valid token.
+    """
+    r = client.post(
+        f"{settings.API_V1_STR}/login/access-token",
+        data={"username": settings.FIRST_SUPERUSER, "password": password},
+    )
+    headers["Authorization"] = f"Bearer {r.json()['access_token']}"
+
+
 def test_get_users_superuser_me(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
@@ -164,7 +179,7 @@ def test_create_user_existing_username(
         json=data,
     )
     created_user = r.json()
-    assert r.status_code == 400
+    assert r.status_code == 409
     assert "_id" not in created_user
 
 
@@ -255,6 +270,12 @@ def test_update_password_me(
     verified, _ = verify_password(new_password, user_db.hashed_password)
     assert verified
 
+    # Password change bumps token_version to invalidate old tokens — the
+    # module-scoped fixture's token is now stale. Re-login and mutate the
+    # fixture dict in place so downstream tests sharing the fixture keep a
+    # valid token.
+    _refresh_superuser_token(client, superuser_token_headers, new_password)
+
     # Revert to the old password to keep consistency in test
     old_data = {
         "current_password": new_password,
@@ -272,6 +293,11 @@ def test_update_password_me(
         settings.FIRST_SUPERUSER_PASSWORD, user_db.hashed_password
     )
     assert verified
+
+    # Revert also bumped token_version; refresh fixture again for downstream.
+    _refresh_superuser_token(
+        client, superuser_token_headers, settings.FIRST_SUPERUSER_PASSWORD
+    )
 
 
 def test_update_password_me_incorrect_password(

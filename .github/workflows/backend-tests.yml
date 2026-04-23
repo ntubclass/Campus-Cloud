@@ -120,7 +120,7 @@ jobs:
 
       - name: Run pytest with coverage
         run: |
-          uv run coverage run -m pytest tests/ -v --tb=short --maxfail=10
+          uv run coverage run -m pytest tests/ -v --tb=short
           uv run coverage xml -o coverage.xml
           uv run coverage report
 
