@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from "react"
+import { Component, type ErrorInfo, type ReactElement, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 interface Props {
@@ -97,7 +97,7 @@ class ErrorBoundaryClass extends Component<
   }
 }
 
-export function ErrorBoundary(props: Props): JSX.Element {
+export function ErrorBoundary(props: Props): ReactElement {
   const { t } = useTranslation()
   return <ErrorBoundaryClass {...props} t={t} />
 }
