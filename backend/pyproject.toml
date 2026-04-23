@@ -28,16 +28,23 @@ dependencies = [
     "pdfplumber>=0.11.0",
     "python-docx>=1.1.0",
     "openpyxl>=3.1.0",
+    "prometheus-client>=0.20.0",
 ]
 
 [dependency-groups]
 dev = [
     "pytest<8.0.0,>=7.4.3",
+    "pytest-asyncio>=0.23.0,<1.0.0",
     "mypy<2.0.0,>=1.8.0",
     "ruff<1.0.0,>=0.2.2",
     "prek>=0.2.24,<1.0.0",
     "coverage<8.0.0,>=7.4.3",
 ]
+
+[tool.pytest.ini_options]
+# Auto-mode: async test functions are awaited without needing
+# @pytest.mark.asyncio decorator on each one. Existing decorators stay valid.
+asyncio_mode = "auto"
 
 [build-system]
 requires = ["hatchling"]

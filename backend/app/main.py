@@ -13,6 +13,8 @@ from app.api.websocket import vnc_proxy
 from app.api.websocket.jobs import jobs_ws_proxy
 from app.api.websocket.terminal import terminal_proxy
 from app.core.config import settings
+from app.core.logging import configure_logging
+from app.core.metrics import PrometheusMiddleware, metrics_endpoint
 from app.core.request_context import RequestContextMiddleware
 from app.exceptions import AppError
 from app.infrastructure.redis import close_redis, init_redis
@@ -83,6 +85,10 @@ class SecurityHeadersMiddleware:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    configure_logging(
+        level=getattr(settings, "LOG_LEVEL", "INFO"),
+        json_output=getattr(settings, "LOG_JSON", True),
+    )
     await init_redis()
     init_background_runner()
     stop_event = asyncio.Event()
@@ -121,6 +127,7 @@ app = FastAPI(
 )
 
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(PrometheusMiddleware)
 app.add_middleware(RequestContextMiddleware)
 
 if settings.all_cors_origins:
@@ -133,6 +140,7 @@ if settings.all_cors_origins:
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.add_route("/metrics", metrics_endpoint, methods=["GET"])
 
 
 @app.exception_handler(AppError)

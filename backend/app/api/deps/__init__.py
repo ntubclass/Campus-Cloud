@@ -23,6 +23,7 @@ from app.api.deps.proxmox import (
     get_resource_info,
     get_vm_info,
 )
+from app.api.deps.rate_limit import rate_limit_by_ip, rate_limit_by_user
 
 __all__ = [
     # Database
@@ -52,4 +53,7 @@ __all__ = [
     "LxcInfoDep",
     "get_resource_info",
     "ResourceInfoDep",
+    # Rate limiting
+    "rate_limit_by_ip",
+    "rate_limit_by_user",
 ]
