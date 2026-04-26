@@ -165,17 +165,13 @@ def _ssh_exec_sync(
     private_key_pem: str,
     command: str,
     timeout: int,
-    insecure: bool,
 ) -> tuple[int, str, str]:
     """建立 SSH 連線並執行指令，回傳 (exit_code, stdout, stderr)。"""
     pkey = paramiko.Ed25519Key.from_private_key(io.StringIO(private_key_pem))
     client = paramiko.SSHClient()
 
-    if insecure:
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    else:
-        client.load_system_host_keys()
-        client.set_missing_host_key_policy(paramiko.RejectPolicy())
+    # 自動接受 unknown host key，避免首次連線因 known_hosts 缺少紀錄而中斷。
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     client.connect(
         hostname=host,
@@ -390,7 +386,6 @@ async def _do_exec(req: SSHExecRequest, *, session: Session | None = None) -> SS
             private_key,
             req.command,
             timeout,
-            settings.ssh_insecure_host_key,
         )
 
         return SSHExecResult(
