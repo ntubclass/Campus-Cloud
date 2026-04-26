@@ -30,7 +30,7 @@ jobs:
           - language: javascript-typescript
             build-mode: none
           - language: go
-            build-mode: none
+            build-mode: autobuild
           - language: actions
             build-mode: none
 
