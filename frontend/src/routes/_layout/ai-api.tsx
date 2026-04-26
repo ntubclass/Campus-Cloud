@@ -477,13 +477,9 @@ function UsageStatCard({
   )
 }
 
-function MyUsageTab({ credentials }: { credentials: AiApiCredentialPublic[] }) {
+function MyUsageTab() {
   const [preset, setPreset] = useState<UsageDatePreset>("30d")
   const { start, end } = useMemo(() => getUsageDates(preset), [preset])
-
-  const activeCredential = credentials.find(
-    (c) => !c.revoked_at && !isExpired(c.expires_at),
-  )
 
   const templateQuery = useQuery({
     queryKey: queryKeys.aiMonitoring.myTemplateUsage({ start, end }),
@@ -496,18 +492,13 @@ function MyUsageTab({ credentials }: { credentials: AiApiCredentialPublic[] }) {
   })
 
   const proxyQuery = useQuery({
-    queryKey: queryKeys.aiMonitoring.myProxyUsage({
-      apiKey: activeCredential?.api_key,
-      start,
-      end,
-    }),
+    queryKey: queryKeys.aiMonitoring.myProxyUsage({ start, end }),
     queryFn: () =>
       AiUserUsageService.getMyProxyUsage({
-        apiKey: activeCredential!.api_key,
         start_date: start,
         end_date: end,
       }),
-    enabled: Boolean(activeCredential && start && end),
+    enabled: Boolean(start && end),
     retry: false,
   })
 
@@ -538,22 +529,15 @@ function MyUsageTab({ credentials }: { credentials: AiApiCredentialPublic[] }) {
       </div>
 
       {/* Proxy usage */}
-      <Panel
-        title="Proxy 用量"
-        description={
-          activeCredential
-            ? "直接呼叫 AI API 的 Token 用量。"
-            : "需要先取得一個有效的 AI API Key 才能查看 Proxy 用量。"
-        }
-      >
-        {activeCredential ? (
-          proxyQuery.isLoading ? (
-            <div className="text-sm text-muted-foreground">載入中…</div>
-          ) : proxyQuery.isError ? (
-            <div className="text-sm text-destructive">
-              無法取得 Proxy 用量資料。
-            </div>
-          ) : proxy ? (
+      <Panel title="Proxy 用量" description="直接呼叫 AI API 的 Token 用量。">
+        {proxyQuery.isLoading ? (
+          <div className="text-sm text-muted-foreground">載入中…</div>
+        ) : proxyQuery.isError ? (
+          <div className="text-sm text-destructive">
+            無法取得 Proxy 用量資料。
+          </div>
+        ) : (
+          proxy && (
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 <UsageStatCard
@@ -602,11 +586,7 @@ function MyUsageTab({ credentials }: { credentials: AiApiCredentialPublic[] }) {
                 </div>
               )}
             </div>
-          ) : null
-        ) : (
-          <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-            你目前沒有有效的 AI API Key，無法查詢 Proxy 用量。
-          </div>
+          )
         )}
       </Panel>
 
@@ -858,7 +838,7 @@ function AiApiPage() {
         </TabsContent>
 
         <TabsContent value="usage" className="space-y-5">
-          <MyUsageTab credentials={credentials} />
+          <MyUsageTab />
         </TabsContent>
       </Tabs>
     </div>
