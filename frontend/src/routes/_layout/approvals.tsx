@@ -6,6 +6,10 @@ import { useTranslation } from "react-i18next"
 
 import { type VMRequestStatus, VmRequestsService } from "@/client"
 import { createAdminRequestColumns } from "@/components/Applications/adminColumns"
+import {
+  BatchProvisionReviewList,
+  useBatchProvisionPendingCount,
+} from "@/components/Approvals/BatchProvisionReviewList"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingItems from "@/components/Pending/PendingItems"
 import { Badge } from "@/components/ui/badge"
@@ -84,11 +88,24 @@ function PendingCountBadge() {
   )
 }
 
+type TabValue = VMRequestStatus | "all" | "batch"
+
+function BatchPendingCountBadge() {
+  const count = useBatchProvisionPendingCount()
+  if (count === 0) return null
+  return (
+    <Badge variant="outline" className="ml-1.5 text-xs">
+      {count}
+    </Badge>
+  )
+}
+
 function Approvals() {
   const { t } = useTranslation(["approvals"])
-  const [statusFilter, setStatusFilter] = useState<VMRequestStatus | null>(
-    "pending",
-  )
+  const [tab, setTab] = useState<TabValue>("pending")
+
+  const statusFilter: VMRequestStatus | null =
+    tab === "batch" ? null : tab === "all" ? null : (tab as VMRequestStatus)
 
   return (
     <div className="flex w-full min-w-0 max-w-full flex-col gap-6 overflow-hidden">
@@ -103,30 +120,35 @@ function Approvals() {
         </div>
       </div>
 
-      <Tabs
-        value={statusFilter || "all"}
-        onValueChange={(v) =>
-          setStatusFilter(v === "all" ? null : (v as VMRequestStatus))
-        }
-      >
+      <Tabs value={tab} onValueChange={(v) => setTab(v as TabValue)}>
         <div className="w-full overflow-x-auto">
           <TabsList className="min-w-max">
-          <TabsTrigger value="pending">
-            {t("approvals:filters.pending")}
-            <PendingCountBadge />
-          </TabsTrigger>
-          <TabsTrigger value="approved">
-            {t("approvals:filters.approved")}
-          </TabsTrigger>
-          <TabsTrigger value="rejected">
-            {t("approvals:filters.rejected")}
-          </TabsTrigger>
-          <TabsTrigger value="all">{t("approvals:filters.all")}</TabsTrigger>
+            <TabsTrigger value="pending">
+              {t("approvals:filters.pending")}
+              <PendingCountBadge />
+            </TabsTrigger>
+            <TabsTrigger value="approved">
+              {t("approvals:filters.approved")}
+            </TabsTrigger>
+            <TabsTrigger value="rejected">
+              {t("approvals:filters.rejected")}
+            </TabsTrigger>
+            <TabsTrigger value="all">
+              {t("approvals:filters.all")}
+            </TabsTrigger>
+            <TabsTrigger value="batch">
+              批量建立
+              <BatchPendingCountBadge />
+            </TabsTrigger>
           </TabsList>
         </div>
       </Tabs>
 
-      <AdminRequestsTable status={statusFilter} />
+      {tab === "batch" ? (
+        <BatchProvisionReviewList />
+      ) : (
+        <AdminRequestsTable status={statusFilter} />
+      )}
     </div>
   )
 }

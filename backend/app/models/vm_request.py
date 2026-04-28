@@ -18,6 +18,7 @@ class VMRequestStatus(str, enum.Enum):
     running = "running"
     rejected = "rejected"
     cancelled = "cancelled"
+    scheduled = "scheduled"
 
 
 class VMMigrationStatus(str, enum.Enum):
@@ -103,6 +104,24 @@ class VMRequest(SQLModel, table=True):
     last_migrated_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+
+    # Recurrence schedule (RFC 5545 RRULE; e.g. FREQ=WEEKLY;BYDAY=FR;BYHOUR=13;BYMINUTE=0).
+    # When set, the scheduler computes the next active window and powers on/off accordingly.
+    recurrence_rule: str | None = Field(default=None)
+    recurrence_duration_minutes: int | None = Field(default=None)
+    schedule_timezone: str | None = Field(default=None)
+    next_window_start: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    next_window_end: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    batch_job_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="batch_provision_jobs.id",
     )
 
     created_at: datetime = Field(

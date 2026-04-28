@@ -1,8 +1,10 @@
 import { Outlet, useRouterState } from "@tanstack/react-router"
 
 import { Footer } from "@/components/Common/Footer"
+import { SessionWarningDialog } from "@/components/Resources/SessionWarningDialog"
 import AppSidebar from "@/components/Sidebar/AppSidebar"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { useSessionWarning } from "@/hooks/useSessionWarning"
 import { cn } from "@/lib/utils"
 
 // 這些路由會填滿整個內容區域，不套用 padding / max-width / footer
@@ -14,9 +16,15 @@ export function AppLayout() {
   const hasFixedFooter =
     location.pathname === "/applications-create" ||
     location.pathname === "/resources-create"
+  const { active: warning, dismiss } = useSessionWarning()
 
   return (
     <div className="app-layout min-h-svh w-full">
+      <SessionWarningDialog
+        status={warning}
+        open={Boolean(warning)}
+        onClose={dismiss}
+      />
       <SidebarProvider defaultOpen={false}>
         <AppSidebar />
         <SidebarInset className="min-w-0 overflow-x-hidden">

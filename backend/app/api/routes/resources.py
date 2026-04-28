@@ -11,6 +11,7 @@ from app.api.deps import (
 from app.core.security import decrypt_value
 from app.exceptions import ProxmoxError
 from app.schemas import Message, NodeSchema, ResourcePublic, SSHKeyResponse
+from app.schemas.resource import ExtendSessionResponse, SessionStatusResponse
 from app.services.proxmox import proxmox_service
 from app.services.resource import resource_service
 from app.repositories import resource as resource_repo
@@ -151,6 +152,32 @@ def delete_resource(
         user_id=current_user.id,
         purge=purge,
         force=force,
+    )
+
+
+@router.get("/{vmid}/session-status", response_model=SessionStatusResponse)
+def get_session_status(
+    vmid: int,
+    resource_info: ResourceInfoDep,
+    session: SessionDep,
+    _current_user: CurrentUser,
+):
+    """Live auto-stop status used by the student UI to show the warning dialog."""
+    return resource_service.get_session_status(
+        session=session, vmid=vmid, resource_info=resource_info
+    )
+
+
+@router.post("/{vmid}/extend-session", response_model=ExtendSessionResponse)
+def extend_session(
+    vmid: int,
+    session: SessionDep,
+    current_user: CurrentUser,
+    _resource_info: ResourceInfoDep,
+):
+    """Add another practice quota window. Only valid mid-practice-session."""
+    return resource_service.extend_session(
+        session=session, vmid=vmid, user_id=current_user.id
     )
 
 
