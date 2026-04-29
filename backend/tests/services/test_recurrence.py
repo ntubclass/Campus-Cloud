@@ -20,7 +20,6 @@ from app.services.scheduling.recurrence import (
     is_in_window,
 )
 
-
 # ─── compute_next_window ─────────────────────────────────────────────────────
 
 
