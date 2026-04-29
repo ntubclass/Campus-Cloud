@@ -23,6 +23,7 @@ from app.repositories import vm_request as vm_request_repo
 from app.services.network import ip_management_service
 from app.services.proxmox import provisioning_service, proxmox_service
 from app.services.scheduling import policy as scheduling_policy
+from app.services.scheduling import recurrence_scheduler
 from app.services.scheduling import support as scheduling_support
 from app.services.user import audit_service
 from app.services.vm import vm_request_placement_service
@@ -1138,6 +1139,18 @@ async def run_scheduler(stop_event: asyncio.Event) -> None:
             ScheduledTask(name="process_due_request_starts", handler=process_due_request_starts),
             ScheduledTask(name="process_due_request_stops", handler=process_due_request_stops),
             ScheduledTask(name="process_pending_deletions", handler=process_pending_deletions_task),
+            ScheduledTask(
+                name="process_recurrence_windows",
+                handler=recurrence_scheduler.process_recurrence_windows,
+            ),
+            ScheduledTask(
+                name="process_scheduled_boot",
+                handler=recurrence_scheduler.process_scheduled_boot,
+            ),
+            ScheduledTask(
+                name="process_auto_stops",
+                handler=recurrence_scheduler.process_auto_stops,
+            ),
         ],
     )
     logger.info("VM request scheduler stopped")
