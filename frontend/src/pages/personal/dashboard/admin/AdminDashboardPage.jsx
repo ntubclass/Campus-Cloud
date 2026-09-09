@@ -52,11 +52,7 @@ export function groupAdminIssues(issues) {
       ...bucket,
       items: issues.filter((issue) => issue.tone === bucket.tone),
     }))
-    .filter((bucket) => bucket.items.length > 0)
-    .map((bucket) => ({
-      ...bucket,
-      total: bucket.items.reduce((sum, issue) => sum + issue.count, 0),
-    }));
+    .filter((bucket) => bucket.items.length > 0);
 }
 
 export function normalizeAssistantPrompt(value) {
@@ -142,9 +138,8 @@ export default function AdminDashboardPage() {
           : buckets.length ? <div className={styles.buckets}>
             {buckets.map((bucket) => <div key={bucket.key} className={`${styles.bucket} ${styles[`bucket_${bucket.key}`]}`}>
               <div className={styles.bucketHead}>
-                <MIcon name={bucket.icon} size={16} />
-                <strong>{t(`AdminDashboardPage.bucket${bucket.key}Title`)}</strong>
-                <em>{bucket.total}</em>
+                <MIcon name={bucket.icon} size={15} />
+                {t(`AdminDashboardPage.bucket${bucket.key}Title`)}
               </div>
               {bucket.items.map((issue) => <button type="button" key={issue.key} className={styles.issue} onClick={() => navigate(issue.path)}>
                 <MIcon name={issue.icon} size={16} />

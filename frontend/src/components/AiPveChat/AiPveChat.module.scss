@@ -1,14 +1,14 @@
 @use "../../assets/styles/variables" as *;
 @use "../../assets/styles/mixins" as *;
 
+/* 只嵌在管理者首頁的助手卡片裡，所以不自己畫卡片：外層已經是一張卡，
+   再套一層就變成盒中盒。訊息語彙沿用站上另一個對話元件 AiFloatingChat。 */
 .chatCard {
-  @include glass-surface;
   @include flex-column;
-  gap: $spacing-16;
+  min-width: 0;
+  gap: $spacing-8;
   height: min(600px, calc(100vh - 260px));
   min-height: 420px;
-  padding: $spacing-24;
-  border-radius: $radius-12;
 }
 
 /* 放大模式：由外層決定高度，這裡只負責填滿 */
@@ -18,69 +18,72 @@
   flex: 1;
 }
 
-/* 嵌在首頁的助手卡片裡：不要自己再畫一層玻璃，高度也壓低一階，
-   對話框不該在還沒幾則訊息時就先吃掉整個首屏。 */
 .compact {
-  height: min(480px, calc(100vh - 330px));
-  min-height: 320px;
-  padding: 0;
-  border-radius: $radius-8;
-  background: none;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  height: min(460px, calc(100vh - 340px));
+  min-height: 300px;
 }
-
 
 .chatLog {
   @include flex-column;
   min-height: 0;
   flex: 1;
-  gap: $spacing-16;
+  gap: $spacing-24;
   overflow-y: auto;
-  padding: $spacing-16;
-  border: 1px solid var(--color-border);
-  border-radius: $radius-8;
-  background: var(--color-hover);
+  padding: $spacing-8 10px $spacing-8 0;
+  scroll-behavior: smooth;
+
+  &::-webkit-scrollbar { width: 5px; }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: $radius-pill;
+  }
 }
 
 .msg {
-  @include flex-column;
-  gap: $spacing-8;
-  padding: $spacing-16;
-  border-radius: $radius-12;
-  font-size: $font-size-14;
-}
-
-.msg_user {
-  /* 問題通常只有一句，讓它靠右且不要拉滿整列 */
-  max-width: min(72ch, 100%);
-  margin-left: auto;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
-}
-
-.msg_assistant {
-  margin-right: $spacing-32;
-  /* 回覆可能含長表格，寬度給滿但內容各自處理溢出 */
-  min-width: 0;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.msgHead {
   display: flex;
-  align-items: center;
-  gap: $spacing-8;
-  font-size: $font-size-12;
-  font-weight: $font-weight-500;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: $font-size-14;
+  animation: messageIn 150ms ease both;
 }
 
-.msg_assistant .msgHead { color: var(--color-primary); }
-.msg_user .msgHead { color: var(--color-text-secondary); }
+@keyframes messageIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-/* 維運回覆是 markdown：節點清單、用量表格、指令片段 */
+.avatar {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.msgBody { min-width: 0; }
+
+/* 問題通常一句話：靠右的實心氣泡，缺角朝發話端 */
+.msg_user {
+  justify-content: flex-end;
+
+  .msgBody {
+    max-width: 84%;
+    padding: 9px 14px;
+    border-radius: $radius-16 $radius-16 4px $radius-16;
+    color: var(--color-text-on-primary);
+    background: var(--color-primary);
+  }
+}
+
+/* 回覆可能含長表格，寬度給滿、不加框，內容各自處理溢出 */
+.msg_assistant .msgBody {
+  flex: 1;
+  padding-top: 3px;
+}
+
 .msgContent {
   overflow-wrap: anywhere;
   color: var(--color-text);
@@ -291,7 +294,10 @@
 
   :global(.material-icons-outlined) { color: var(--color-primary); }
 }
-.msgPlain { white-space: pre-wrap; }
+.msgPlain { margin: 0; white-space: pre-wrap; }
+
+/* 氣泡是實心主色，文字色要跟著氣泡而不是 .msgContent 的預設 */
+.msg_user .msgContent { color: inherit; }
 
 .toolRow {
   display: flex;
@@ -322,7 +328,7 @@
 
 .pendingBox {
   @include flex-column;
-  margin-right: $spacing-32;
+  margin-left: 38px;
   padding: $spacing-16;
   gap: $spacing-8;
   border: 1px solid color-mix(in srgb, var(--color-danger) 25%, transparent);
@@ -366,15 +372,10 @@
 
 .thinking {
   display: flex;
-  margin-right: $spacing-32;
-  padding: $spacing-16;
+  padding-top: 7px;
   align-items: center;
   gap: $spacing-8;
-  border: 1px solid var(--color-border);
-  border-radius: $radius-12;
   color: var(--color-text-muted);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
   font-size: $font-size-14;
 }
 
@@ -393,43 +394,51 @@
 
 /* 輸入與送出並排：兩行式的送出鍵把輸出區的高度吃掉了 */
 .composer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: stretch;
+  display: flex;
+  align-items: flex-end;
   gap: $spacing-8;
-}
-
-.composer textarea {
-  min-height: 52px;
-  padding: 10px $spacing-16;
+  padding: 8px 8px 8px 14px;
   border: 1px solid var(--color-border);
-  border-radius: $radius-8;
-  outline: none;
-  color: var(--color-text-primary);
+  border-radius: $radius-16;
   background: var(--color-surface);
-  font-size: $font-size-14;
-  resize: none;
+  transition: border-color $transition-base, box-shadow $transition-base;
 }
 
-.composer textarea:focus {
+.composer:focus-within {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
+.composer textarea {
+  min-width: 0;
+  min-height: 34px;
+  max-height: 120px;
+  flex: 1;
+  padding: 7px 0;
+  border: 0;
+  outline: none;
+  color: var(--color-text-primary);
+  background: transparent;
+  font-family: inherit;
+  font-size: $font-size-14;
+  line-height: 1.5;
+  resize: none;
+}
+
+.composer textarea::placeholder { color: var(--color-text-muted); }
 .composer textarea:disabled { cursor: not-allowed; opacity: .55; }
 .composerActions { display: flex; }
-.composerActions button { height: 100%; }
 
 .btnPrimary,
 .btnSecondary,
 .btnAllow {
   display: inline-flex;
-  min-height: 36px;
-  padding: 8px $spacing-16;
+  min-height: 34px;
+  padding: 6px $spacing-16;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border-radius: $radius-8;
+  border-radius: $radius-pill;
   font-size: $font-size-14;
   font-weight: $font-weight-500;
   white-space: nowrap;

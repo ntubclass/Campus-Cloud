@@ -193,37 +193,43 @@ export default function AiPveChat({ initialPrompt = "", compact = false, fill = 
   return (
     <div className={`${styles.chatCard} ${compact ? styles.compact : ""} ${fill ? styles.fill : ""}`}>
       <div className={styles.chatLog} aria-live="polite">
-        {messages.map((message, index) => (
-          <div
-            key={`${message.role}-${index}`}
-            className={`${styles.msg} ${message.role === "user" ? styles.msg_user : styles.msg_assistant}`}
-          >
-            <div className={styles.msgHead}>
-              <MIcon name={message.role === "assistant" ? "smart_toy" : "person"} size={16} />
-              <span>{message.role === "assistant" ? "AI-PVE" : t("AiPveChat.you")}</span>
-            </div>
-            {message.role === "assistant" ? (
-              <AiPveMarkdownContent content={message.content} />
-            ) : (
-              <p className={`${styles.msgContent} ${styles.msgPlain}`}>
-                {sanitizeAiPveContent(message.content)}
-              </p>
-            )}
-            {message.tools?.length > 0 && (
-              <div className={styles.toolRow}>
-                <span className={styles.toolLabel}>
-                  <MIcon name="terminal" size={14} />
-                  {t("AiPveChat.toolCallsLabel")}
-                </span>
-                {message.tools.map((tool, toolIndex) => (
-                  <span key={`${tool.name}-${toolIndex}`} className={styles.toolBadge}>
-                    {tool.name}
-                  </span>
-                ))}
+        {messages.map((message, index) => {
+          const isUser = message.role === "user";
+          return (
+            <div
+              key={`${message.role}-${index}`}
+              className={`${styles.msg} ${isUser ? styles.msg_user : styles.msg_assistant}`}
+            >
+              {/* 助理有頭像、回覆不加框；使用者是靠右的實心氣泡——
+                  與站上另一個對話元件 AiFloatingChat 用同一套語彙。 */}
+              {!isUser && (
+                <span className={styles.avatar}><MIcon name="smart_toy" size={16} /></span>
+              )}
+              <div className={styles.msgBody}>
+                {isUser ? (
+                  <p className={`${styles.msgContent} ${styles.msgPlain}`}>
+                    {sanitizeAiPveContent(message.content)}
+                  </p>
+                ) : (
+                  <AiPveMarkdownContent content={message.content} />
+                )}
+                {message.tools?.length > 0 && (
+                  <div className={styles.toolRow}>
+                    <span className={styles.toolLabel}>
+                      <MIcon name="terminal" size={13} />
+                      {t("AiPveChat.toolCallsLabel")}
+                    </span>
+                    {message.tools.map((tool, toolIndex) => (
+                      <span key={`${tool.name}-${toolIndex}`} className={styles.toolBadge}>
+                        {tool.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
 
         {pendingTool && (
           <div className={styles.pendingBox}>
@@ -266,9 +272,12 @@ export default function AiPveChat({ initialPrompt = "", compact = false, fill = 
         )}
 
         {isSending && (
-          <div className={styles.thinking}>
-            <span className={styles.pulse} />
-            {t("AiPveChat.thinking")}
+          <div className={`${styles.msg} ${styles.msg_assistant}`}>
+            <span className={styles.avatar}><MIcon name="smart_toy" size={16} /></span>
+            <div className={styles.thinking}>
+              <span className={styles.pulse} />
+              {t("AiPveChat.thinking")}
+            </div>
           </div>
         )}
         <div ref={logEndRef} />

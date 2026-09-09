@@ -22,6 +22,16 @@
   min-height: 420px;
 }
 
+/* 卡片沿用 PveOperationsQuickLook 的表面處理（實線細邊 + 微染背景），
+   否則同一排裡一張毛玻璃、一張實線框，看起來像兩套系統。 */
+@mixin surface-card {
+  min-width: 0;
+  padding: $spacing-16;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-12;
+  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-hover));
+}
+
 /* ── 待辦 + 硬體狀態並排 ───────────────────────────────────────────
    兩邊內容都不長，疊成上下兩段只會把首屏拉長；並排後一眼看完。 */
 
@@ -37,15 +47,15 @@
 }
 
 .card {
-  @include glass-surface;
+  @include surface-card;
   @include flex-column;
-  gap: 10px;
-  padding: $spacing-16;
-  border-radius: $radius-12;
+  gap: $spacing-8;
 }
 
 .cardHead {
-  @include flex-between;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: $spacing-8;
 }
 
@@ -53,20 +63,22 @@
   margin: 0;
   color: var(--color-text-primary);
   font-size: $font-size-16;
-  font-weight: $font-weight-700;
+  line-height: 1.35;
 }
 
 .cardHead > button {
   display: inline-flex;
+  min-height: 30px;
+  padding: 0 7px;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: 5px;
   border: 0;
   border-radius: $radius-8;
   color: var(--color-primary);
   background: transparent;
   font-size: $font-size-12;
-  font-weight: $font-weight-500;
+  font-weight: $font-weight-700;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -74,7 +86,7 @@
 
 .checking {
   display: flex;
-  padding: $spacing-16 0;
+  min-height: 92px;
   align-items: center;
   justify-content: center;
   gap: $spacing-8;
@@ -83,33 +95,21 @@
 }
 
 /* ── 待辦三桶 ─────────────────────────────────────────────────────
-   桶頭一行（圖示 + 名稱 + 總數），項目一行一列，不放描述文字：
-   標題已經說完是什麼，描述只是把每列撐成三倍高。 */
+   桶頭只是一條有顏色的小標，數字全部集中在右欄對齊成一直行，
+   總數不再另外浮在標題右邊——每列都有數字，總和用看的就夠。 */
 
-.buckets { @include flex-column; gap: 10px; }
+.buckets { @include flex-column; gap: $spacing-16; }
 
-.bucket { @include flex-column; gap: 2px; }
+.bucket { min-width: 0; }
 
 .bucketHead {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr) auto;
+  display: flex;
+  margin-bottom: 2px;
   align-items: center;
-  gap: 7px;
-  padding: 0 4px 4px;
-}
-
-.bucketHead strong {
-  @include text-truncate;
+  gap: 6px;
   font-size: $font-size-12;
   font-weight: $font-weight-700;
   letter-spacing: 0.02em;
-}
-
-.bucketHead em {
-  font-size: $font-size-12;
-  font-style: normal;
-  font-weight: $font-weight-700;
-  font-variant-numeric: tabular-nums;
 }
 
 .bucket_faults .bucketHead { color: var(--color-danger); }
@@ -119,56 +119,61 @@
 .issue {
   display: grid;
   width: 100%;
-  grid-template-columns: 16px minmax(0, 1fr) auto 16px;
+  min-height: 38px;
+  padding: 5px 2px;
+  grid-template-columns: 17px minmax(0, 1fr) auto 16px;
   align-items: center;
   gap: 8px;
-  padding: 7px 8px;
   border: 0;
-  border-radius: $radius-8;
-  background: none;
+  border-bottom: 1px solid var(--color-divider);
+  color: var(--color-text-primary);
+  background: transparent;
   text-align: left;
   cursor: pointer;
-  transition: background $transition-base;
+  transition: background $transition-base, color $transition-base;
 }
 
-.issue:hover { background: var(--color-hover); }
+.issue:hover { color: var(--color-primary); background: var(--color-hover); }
+.bucket .issue:last-child { border-bottom: 0; }
 
 .issue > span {
   @include text-truncate;
-  color: var(--color-text-primary);
   font-size: $font-size-14;
 }
 
 .issue b {
-  color: var(--color-text-primary);
   font-size: $font-size-14;
+  font-weight: $font-weight-700;
   font-variant-numeric: tabular-nums;
 }
 
 .issue :global(.material-icons-outlined) { color: var(--color-text-muted); }
+.issue:hover :global(.material-icons-outlined) { color: inherit; }
 
 .allClear {
   display: flex;
-  padding: 10px 4px;
+  min-height: 38px;
+  margin-top: $spacing-8;
+  padding: $spacing-8 10px;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
+  border-radius: $radius-8;
   color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
 }
 
 .allClear div { display: flex; min-width: 0; flex-direction: column; gap: 1px; }
-.allClear strong { color: var(--color-text-primary); font-size: $font-size-14; }
-.allClear small { color: var(--color-text-muted); font-size: $font-size-12; }
+.allClear strong { font-size: $font-size-14; }
+.allClear small { font-size: $font-size-12; opacity: 0.84; }
 
 /* ── AI 助手 ──────────────────────────────────────────────────────
    還沒問問題前它只是一條輸入列：標題一行、輸入一行、建議一行。
-   之前的大圖示 + 說明段落 + 空白對話框會先吃掉半個螢幕。 */
+   對話開始後才展開，對話本身不再自己畫卡片（見 AiPveChat.compact）。 */
 
 .assistant {
-  @include glass-surface;
+  @include surface-card;
   @include flex-column;
   gap: 10px;
-  padding: $spacing-16;
-  border-radius: $radius-12;
 }
 
 .assistantFocused {
@@ -189,7 +194,7 @@
   margin: 0;
   color: var(--color-text-primary);
   font-size: $font-size-16;
-  font-weight: $font-weight-700;
+  line-height: 1.35;
 }
 
 .assistantHint {
@@ -203,30 +208,33 @@
 
 .assistantActions button {
   display: inline-flex;
+  min-height: 30px;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: $radius-pill;
-  color: var(--color-text-secondary);
-  background: var(--color-surface);
+  gap: 5px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: $radius-8;
+  color: var(--color-primary);
+  background: transparent;
   font-size: $font-size-12;
+  font-weight: $font-weight-700;
+  white-space: nowrap;
   cursor: pointer;
-  transition: background $transition-base, color $transition-base;
 }
 
-.assistantActions button:hover { background: var(--color-hover); color: var(--color-text-primary); }
+.assistantActions button:hover { background: var(--color-hover); }
 
 .assistantForm { @include flex-column; gap: $spacing-8; }
 
+/* 輸入列與對話中的輸入框同一個造型，問完第一題不會看到版面換一套 */
 .assistantInput {
   display: grid;
-  padding: 6px 6px 6px 12px;
+  padding: 8px 8px 8px 14px;
   grid-template-columns: 19px minmax(0, 1fr) auto;
   align-items: center;
-  gap: $spacing-8;
+  gap: 10px;
   border: 1px solid var(--color-border);
-  border-radius: $radius-pill;
+  border-radius: $radius-16;
   background: var(--color-surface);
   transition: border-color $transition-base, box-shadow $transition-base;
 }
@@ -240,6 +248,7 @@
 
 .assistantInput input {
   min-width: 0;
+  padding: 7px 0;
   border: 0;
   outline: none;
   color: var(--color-text-primary);
@@ -253,7 +262,7 @@
 .assistantInput button {
   display: inline-flex;
   min-height: 34px;
-  padding: 0 14px;
+  padding: 0 $spacing-16;
   align-items: center;
   gap: 5px;
   border: 0;
@@ -282,7 +291,7 @@
   border: 1px solid var(--color-border);
   border-radius: $radius-pill;
   color: var(--color-text-secondary);
-  background: transparent;
+  background: var(--color-surface);
   font-size: $font-size-12;
   cursor: pointer;
   transition: background $transition-base, border-color $transition-base, color $transition-base;
