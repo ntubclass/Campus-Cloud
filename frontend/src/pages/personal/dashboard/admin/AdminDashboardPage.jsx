@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import AiPveChat from "../../../../components/AiPveChat/AiPveChat";
-import PveOperationsQuickLook from "../../../../components/PveOperationsQuickLook/PveOperationsQuickLook";
 import MIcon from "../../../../components/MIcon";
+import usePveOverview from "../../../../hooks/usePveOverview";
 import { useAuth } from "../../../../contexts/AuthContext";
 import { AiApiService } from "../../../../services/aiApi";
 import { BatchProvisionService } from "../../../../services/batchProvision";
@@ -11,9 +11,15 @@ import { JobsService } from "../../../../services/jobs";
 import { MonitoringService } from "../../../../services/monitoring";
 import { SpecChangeRequestsService } from "../../../../services/specChangeRequests";
 import { VmRequestsService } from "../../../../services/vmRequests";
+import {
+  buildFyiStats,
+  buildTodayRows,
+  buildUrgentRows,
+  formatCheckedAt,
+  mergeInfraProblems,
+} from "./adminAttention";
 import styles from "./AdminDashboardPage.module.scss";
 import PageHeader from "../../../../components/PageHeader/PageHeader";
-import i18n from "../../../../i18n";
 
 export function countRows(response) {
   if (Array.isArray(response)) return response.length;
@@ -24,50 +30,20 @@ export function countRows(response) {
   return 0;
 }
 
-const defaultT = (key) => i18n.t(key, { ns: "personal" });
-
-export function buildAdminIssues(checks, t = defaultT) {
-  const issues = [];
-  if (checks.alerts > 0) issues.push({ key: "alerts", tone: "danger", icon: "error", title: t("AdminDashboardPage.issueAlertsTitle"), description: t("AdminDashboardPage.issueAlertsDesc"), count: checks.alerts, path: "/monitoring" });
-  if (checks.failedJobs > 0) issues.push({ key: "jobs", tone: "danger", icon: "error_outline", title: t("AdminDashboardPage.issueJobsTitle"), description: t("AdminDashboardPage.issueJobsDesc"), count: checks.failedJobs, path: "/jobs" });
-  if (checks.requests > 0) issues.push({ key: "requests", tone: "info", icon: "pending_actions", title: t("AdminDashboardPage.issueRequestsTitle"), description: t("AdminDashboardPage.issueRequestsDesc"), count: checks.requests, path: "/request-review" });
-  if (checks.batches > 0) issues.push({ key: "batches", tone: "info", icon: "library_add_check", title: t("AdminDashboardPage.issueBatchesTitle"), description: t("AdminDashboardPage.issueBatchesDesc"), count: checks.batches, path: "/batch-review" });
-  if (checks.aiRequests > 0) issues.push({ key: "ai", tone: "info", icon: "rate_review", title: t("AdminDashboardPage.issueAiTitle"), description: t("AdminDashboardPage.issueAiDesc"), count: checks.aiRequests, path: "/ai-api-review" });
-  if (checks.unavailable > 0) issues.push({ key: "unavailable", tone: "muted", icon: "cloud_off", title: t("AdminDashboardPage.issueUnavailableTitle"), description: t("AdminDashboardPage.issueUnavailableDesc"), count: checks.unavailable, path: "/monitoring" });
-  return issues;
-}
-
-/* 待辦分三桶，因為管理員對它們的反應完全不同：
-   故障要現在動手、審核是別人在等我放行、狀態不明只是資料沒收到。
-   桶子由既有 issue 的 tone 決定，避免同一份清單定義兩次。 */
-const ISSUE_BUCKETS = [
-  { key: "faults", tone: "danger", icon: "crisis_alert" },
-  { key: "review", tone: "info", icon: "approval" },
-  { key: "degraded", tone: "muted", icon: "cloud_off" },
-];
-
-export function groupAdminIssues(issues) {
-  return ISSUE_BUCKETS
-    .map((bucket) => ({
-      ...bucket,
-      items: issues.filter((issue) => issue.tone === bucket.tone),
-    }))
-    .filter((bucket) => bucket.items.length > 0);
-}
-
 export function normalizeAssistantPrompt(value) {
   return String(value ?? "").trim();
 }
 
 export default function AdminDashboardPage() {
-  const { t } = useTranslation("personal");
+  const { t, i18n } = useTranslation("personal");
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { overview, loading: overviewLoading, refreshing, error: overviewError, reload } = usePveOverview();
   const [assistantPrompt, setAssistantPrompt] = useState("");
   const [conversationPrompt, setConversationPrompt] = useState("");
-  /* 放大模式：對話佔滿版面，上面的待辦與狀態暫時收起來 */
+  /* 放大模式：對話佔滿版面，上面的待辦暫時收起來 */
   const [focusMode, setFocusMode] = useState(false);
-  const [checks, setChecks] = useState({ alerts: 0, failedJobs: 0, requests: 0, batches: 0, aiRequests: 0, unavailable: 0 });
+  const [checks, setChecks] = useState({ alerts: [], failedJobs: 0, requests: 0, batches: 0, aiRequests: 0, unavailable: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -84,15 +60,15 @@ export default function AdminDashboardPage() {
       ]);
       if (!active) return;
       const value = (index) => settled[index].status === "fulfilled" ? settled[index].value : null;
-      const unavailable = settled.filter((result) => result.status === "rejected").length;
       const aiPending = value(3)?.data?.filter((request) => request.status === "pending").length ?? 0;
+      const alertRows = value(5);
       setChecks({
         requests: countRows(value(0)) + countRows(value(1)),
         batches: countRows(value(2)),
         aiRequests: aiPending,
         failedJobs: countRows(value(4)),
-        alerts: countRows(value(5)),
-        unavailable,
+        alerts: Array.isArray(alertRows) ? alertRows : alertRows?.data ?? [],
+        unavailable: settled.filter((result) => result.status === "rejected").length,
       });
       setLoading(false);
     }
@@ -100,12 +76,20 @@ export default function AdminDashboardPage() {
     return () => { active = false; };
   }, []);
 
-  const issues = useMemo(() => buildAdminIssues(checks, t), [checks, t]);
-  const buckets = useMemo(() => groupAdminIssues(issues), [issues]);
-  const pendingTotal = useMemo(
-    () => issues.reduce((sum, issue) => sum + issue.count, 0),
-    [issues],
+  /* 即時異常與未解除告警的門檻判斷共用同一組設定，兩邊都列會讓同一台機器
+     出現兩次；mergeInfraProblems 負責去重，細節見 adminAttention.js。 */
+  const infraProblems = useMemo(
+    () => mergeInfraProblems(overview?.issues ?? [], checks.alerts ?? []),
+    [overview?.issues, checks.alerts],
   );
+  const urgent = useMemo(
+    () => buildUrgentRows({ infraProblems, failedJobs: checks.failedJobs }, t),
+    [infraProblems, checks.failedJobs, t],
+  );
+  const today = useMemo(() => buildTodayRows(checks, t), [checks, t]);
+  const stats = useMemo(() => buildFyiStats(overview, t), [overview, t]);
+
+  const busy = loading || (overviewLoading && !overview);
   const name = user?.full_name?.trim() || user?.email?.split("@")[0] || t("AdminDashboardPage.defaultName");
 
   function resetAssistant() {
@@ -130,44 +114,68 @@ export default function AdminDashboardPage() {
   return <div className={`${styles.page} ${focusMode ? styles.pageFocused : ""}`}>
     <PageHeader title={t("AdminDashboardPage.greeting", { name })} subtitle={t("AdminDashboardPage.subtitle")} />
 
-    {/* 待辦與硬體狀態並排：一邊回答「要做什麼」，一邊回答「有沒有壞」，
-        兩邊內容都不長，疊成兩段只是把頁面拉長。 */}
-    {!focusMode && <div className={styles.topGrid}>
-      <section className={styles.card} aria-labelledby="admin-attention-title">
-        <div className={styles.cardHead}>
-          {/* 副標與右卡的「更新於…」同樣是兩行，否則兩張卡的內容起始高度差一截 */}
-          <div>
-            <h2 id="admin-attention-title">{t("AdminDashboardPage.attentionTitle")}</h2>
-            <span className={styles.cardSubtitle}>
-              {loading ? t("AdminDashboardPage.checking")
-                : pendingTotal ? t("AdminDashboardPage.attentionSummary", { count: pendingTotal })
-                : t("AdminDashboardPage.attentionSummaryClear")}
-            </span>
-          </div>
-          <button type="button" onClick={() => navigate("/monitoring")}>{t("AdminDashboardPage.openMonitoring")}<MIcon name="arrow_forward" size={15} /></button>
+    {!focusMode && <section className={styles.attention} aria-labelledby="admin-attention-title">
+      <div className={styles.attentionHead}>
+        <div>
+          <h2 id="admin-attention-title">{t("AdminDashboardPage.attentionTitle")}</h2>
+          <span className={styles.checkedAt}>
+            {overview
+              ? t("AdminDashboardPage.pveUpdatedAt", { time: formatCheckedAt(overview.collected_at, i18n.language) })
+              : t("AdminDashboardPage.pveNotChecked")}
+          </span>
         </div>
-        {loading ? <div className={styles.checking}><MIcon name="sync" size={18} className={styles.spin} /></div>
-          : buckets.length ? <div className={styles.buckets}>
-            {buckets.map((bucket) => <div key={bucket.key} className={`${styles.bucket} ${styles[`bucket_${bucket.key}`]}`}>
-              <div className={styles.bucketHead}>
-                <MIcon name={bucket.icon} size={15} />
-                {t(`AdminDashboardPage.bucket${bucket.key}Title`)}
-              </div>
-              {bucket.items.map((issue) => <button type="button" key={issue.key} className={styles.issue} onClick={() => navigate(issue.path)}>
-                <MIcon name={issue.icon} size={16} />
-                <span>{issue.title}</span>
-                <b>{issue.count}</b>
-                <MIcon name="chevron_right" size={16} />
-              </button>)}
-            </div>)}
-          </div> : <div className={styles.allClear}>
-            <MIcon name="check_circle" size={19} />
-            <div><strong>{t("AdminDashboardPage.allClearTitle")}</strong><small>{t("AdminDashboardPage.allClearDesc")}</small></div>
-          </div>}
-      </section>
+        <button type="button" onClick={() => reload()} disabled={busy || refreshing}>
+          <MIcon name="refresh" size={15} className={refreshing ? styles.spin : ""} />
+          {t("AdminDashboardPage.pveRefresh")}
+        </button>
+      </div>
 
-      <PveOperationsQuickLook />
-    </div>}
+      {busy ? <div className={styles.checking}><MIcon name="sync" size={18} className={styles.spin} />{t("AdminDashboardPage.checking")}</div> : <>
+        {/* 現在就處理：服務已經受影響，看到就該動手 */}
+        {urgent.length > 0 && <div className={`${styles.tier} ${styles.tierNow}`}>
+          <h3><MIcon name="priority_high" size={15} />{t("AdminDashboardPage.tierNowTitle")}</h3>
+          {urgent.map((row) => <button type="button" key={row.key} className={`${styles.row} ${styles[`row_${row.tone}`]}`} onClick={() => navigate(row.path)}>
+            <MIcon name={row.icon} size={17} />
+            <span><strong>{row.title}</strong><small>{row.detail}</small></span>
+            {row.count ? <b>{row.count}</b> : null}
+            <MIcon name="chevron_right" size={16} />
+          </button>)}
+        </div>}
+
+        {/* 排進今天：有人被卡住等我放行，但服務沒壞 */}
+        {today.length > 0 && <div className={styles.tier}>
+          <h3><MIcon name="approval" size={15} />{t("AdminDashboardPage.tierTodayTitle")}</h3>
+          {today.map((row) => <button type="button" key={row.key} className={styles.row} onClick={() => navigate(row.path)}>
+            <MIcon name={row.icon} size={17} />
+            <span><strong>{row.title}</strong></span>
+            <b>{row.count}</b>
+            <MIcon name="chevron_right" size={16} />
+          </button>)}
+        </div>}
+
+        {urgent.length === 0 && today.length === 0 && <div className={styles.allClear}>
+          <MIcon name="check_circle" size={19} />
+          <div><strong>{t("AdminDashboardPage.allClearTitle")}</strong><small>{t("AdminDashboardPage.allClearDesc")}</small></div>
+        </div>}
+
+        {/* 只是知會：不需要動作的運作數字，收成一條窄帶 */}
+        <div className={styles.statsBar}>
+          {stats.map((stat) => <button type="button" key={stat.key} onClick={() => navigate(stat.path)}>
+            <MIcon name={stat.icon} size={15} />
+            <span>{stat.label}</span>
+            <strong>{stat.value}</strong>
+          </button>)}
+          {(overviewError || overview?.data_status === "stale" || overview?.data_status === "partial") && <span className={styles.staleNote}>
+            <MIcon name="sync_problem" size={14} />
+            {overview?.data_status === "partial" ? t("AdminDashboardPage.pvePartialMessage") : t("AdminDashboardPage.pveStaleMessage")}
+          </span>}
+          {checks.unavailable > 0 && <span className={styles.staleNote}>
+            <MIcon name="cloud_off" size={14} />
+            {t("AdminDashboardPage.issueUnavailableTitle")}
+          </span>}
+        </div>
+      </>}
+    </section>}
 
     {/* AI 助手：沒開始對話前只是一條輸入列，不要先佔掉整片高度 */}
     <section className={`${styles.assistant} ${focusMode ? styles.assistantFocused : ""}`} aria-labelledby="admin-assistant-title">
