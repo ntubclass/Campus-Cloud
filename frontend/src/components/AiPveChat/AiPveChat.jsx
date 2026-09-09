@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import MIcon from "../MIcon";
 import { useToast } from "../../hooks/useToast";
 import { AiPveLogService } from "../../services/aiPveLog";
+import { AI_PVE_MARKDOWN_COMPONENTS } from "./aiPveRichText";
 import styles from "./AiPveChat.module.scss";
 
 /** 清除模型殘留的 tool call 與思考標記，避免原始標記顯示在對話框中。 */
@@ -18,11 +19,16 @@ export function sanitizeAiPveContent(value) {
     .trim();
 }
 
-/** 將 AI 回覆以安全的 Markdown 呈現，避免格式標記以原始文字顯示。 */
+/** 將 AI 回覆以安全的 Markdown 呈現，避免格式標記以原始文字顯示。
+ *  表格內的狀態標記、分層標籤與百分比再轉成徽章／晶片／量表，見 aiPveRichText。 */
 export function AiPveMarkdownContent({ content }) {
   return (
     <div className={`${styles.msgContent} ${styles.msgMarkdown}`}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeSanitize]}
+        components={AI_PVE_MARKDOWN_COMPONENTS}
+      >
         {sanitizeAiPveContent(content)}
       </ReactMarkdown>
     </div>

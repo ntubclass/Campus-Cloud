@@ -15,12 +15,43 @@
     padding: 0;
   }
 }
+
+/* 放大模式：只剩對話，讓它吃滿視窗高度 */
+.pageFocused {
+  height: calc(100vh - 120px);
+  min-height: 480px;
+}
+
+/* ── 分層外框 ─────────────────────────────────────────────────────
+   三層由上而下是「要我決策 → 平台現況 → 設定入口」，
+   注意力成本遞減，所以視覺重量也遞減。 */
+
+.tier {
+  @include glass-surface;
+  overflow: hidden;
+  border-radius: $radius-16;
+}
+
+.sectionHeading {
+  @include flex-between;
+  gap: $spacing-16;
+  padding: $spacing-16 $spacing-24;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.sectionHeading h2 {
+  margin: 3px 0 2px;
+  color: var(--color-text-primary);
+  font-size: $font-size-18;
+}
+
 .sectionHeading p {
   margin: 0;
   color: var(--color-text-secondary);
   font-size: $font-size-14;
   line-height: 1.6;
 }
+
 .eyebrow {
   color: var(--color-primary);
   font-size: 11px;
@@ -28,304 +59,6 @@
   letter-spacing: 0.08em;
 }
 
-.assistantSection {
-  @include glass-surface($shadow: var(--shadow-md));
-  overflow: hidden;
-  border-radius: $radius-16;
-}
-.assistantHero {
-  display: grid;
-  grid-template-columns: minmax(280px, 0.8fr) minmax(460px, 1.2fr);
-  grid-template-areas:
-    "intro intro"
-    "status form";
-  gap: $spacing-32;
-  padding: $spacing-32;
-  align-items: center;
-}
-.assistantLeft {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: $spacing-24;
-  grid-area: status;
-}
-/* 對話開始後保留左側硬體快看，右側縮小比例承載聊天 */
-.assistantSectionExpanded .assistantHero {
-  grid-template-columns: minmax(260px, 0.7fr) minmax(380px, 1.3fr);
-  grid-template-areas:
-    "intro chat"
-    "status chat";
-  gap: $spacing-24;
-  padding: $spacing-24;
-  align-items: stretch;
-}
-.assistantSectionExpanded .assistantLeft {
-  display: flex;
-  min-width: 0;
-  gap: $spacing-16;
-}
-.assistantSectionExpanded .assistantIntro {
-  align-items: center;
-  gap: 10px;
-}
-.assistantSectionExpanded .assistantIcon {
-  /* 圖示字級固定 28，框留到 40 才不會擠邊 */
-  width: 40px;
-  height: 40px;
-  border-radius: $radius-8;
-}
-.assistantSectionExpanded .assistantIntro h2 {
-  margin: 0;
-  font-size: $font-size-16;
-}
-.assistantSectionExpanded .assistantLabel {
-  display: none;
-}
-.assistantChatColumn {
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  flex-direction: column;
-  gap: 12px;
-  grid-area: chat;
-}
-.assistantChatColumn > :last-child {
-  width: 100%;
-  min-width: 0;
-}
-.assistantSectionExpanded .assistantActions {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: flex-end;
-  gap: $spacing-8;
-}
-
-/* 放大模式：整頁固定成一個視窗高，剩下的高度全給對話。
-   不寫死標題列高度，交給 flex 去分。 */
-.pageFocused {
-  height: calc(100dvh - 120px);
-  min-height: 420px;
-}
-
-.assistantSectionFocused {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-}
-.assistantSectionFocused .assistantHero {
-  min-height: 0;
-  flex: 1;
-}
-.assistantSectionFocused .assistantLeft,
-.assistantSectionFocused .assistantChatColumn {
-  min-height: 0;
-}
-.assistantSectionFocused .assistantLeft {
-  overflow: auto;
-}
-.assistantSectionFocused .assistantChatColumn > :last-child {
-  min-height: 0;
-  flex: 1;
-}
-
-.assistantReset {
-  min-height: 34px;
-  padding: 0 12px;
-  font-size: $font-size-12;
-}
-
-.assistantActions {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: $spacing-8;
-}
-
-/* 放大模式：整頁固定成一個視窗高，剩下的高度全給對話。
-   不寫死標題列高度，交給 flex 去分。 */
-.pageFocused {
-  height: calc(100dvh - 120px);
-  min-height: 420px;
-}
-
-.assistantSectionFocused {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-}
-
-.assistantReset {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: $radius-pill;
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  font-size: $font-size-14;
-  cursor: pointer;
-
-  &:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
-}
-.assistantIntro {
-  display: flex;
-  align-items: flex-start;
-  gap: $spacing-16;
-  grid-area: intro;
-}
-.assistantIcon {
-  display: grid;
-  width: 54px;
-  height: 54px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: $radius-12;
-  color: var(--color-text-on-primary);
-  background: var(--color-primary);
-  box-shadow: var(--shadow-sm);
-}
-.assistantIntro > div {
-  min-width: 0;
-}
-.assistantLabel {
-  color: var(--color-primary);
-  font-size: 11px;
-  font-weight: $font-weight-700;
-  letter-spacing: 0.08em;
-}
-.assistantIntro h2 {
-  margin: $spacing-4 0 $spacing-8;
-  color: var(--color-text-primary);
-  font-size: $font-size-24;
-  line-height: 1.25;
-}
-.assistantIntro p {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: $font-size-14;
-  line-height: 1.7;
-}
-.assistantForm {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 10px;
-  grid-area: form;
-}
-.assistantInput {
-  display: grid;
-  min-height: 76px;
-  padding: 12px 12px 12px $spacing-16;
-  grid-template-columns: 22px minmax(0, 1fr) auto;
-  /* 三個元素同一條中線：之前讓按鈕沉到底，中間會空出一塊 */
-  align-items: center;
-  gap: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: $radius-12;
-  color: var(--color-primary);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
-}
-.assistantInput:focus-within {
-  border-color: var(--color-primary);
-  box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent),
-    var(--shadow-sm);
-}
-.assistantInput textarea {
-  width: 100%;
-  min-height: 46px;
-  padding: 2px 0;
-  border: 0;
-  outline: 0;
-  color: var(--color-text-primary);
-  background: transparent;
-  font: inherit;
-  /* 16px：這是整頁的主要輸入，也避免手機上聚焦時自動放大 */
-  font-size: $font-size-16;
-  line-height: 1.65;
-  resize: none;
-}
-.assistantInput textarea::placeholder {
-  color: var(--color-text-muted);
-}
-.assistantInput button {
-  display: inline-flex;
-  min-height: 46px;
-  padding: 0 $spacing-16;
-  align-items: center;
-  justify-content: center;
-  gap: $spacing-8;
-  border: 1px solid var(--color-primary);
-  border-radius: $radius-8;
-  color: var(--color-text-on-primary);
-  background: var(--color-primary);
-  font-size: $font-size-14;
-  font-weight: $font-weight-700;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background 140ms ease;
-}
-.assistantInput button:hover:not(:disabled) {
-  background: var(--color-primary-dark);
-}
-.assistantInput button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-.assistantFooter {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: $spacing-8;
-  color: var(--color-text-muted);
-  font-size: $font-size-12;
-}
-.assistantFooter button {
-  min-height: 34px;
-  padding: 0 14px;
-  border: 1px solid var(--color-border);
-  border-radius: $radius-pill;
-  color: var(--color-text-secondary);
-  background: var(--color-surface);
-  font-size: $font-size-12;
-  cursor: pointer;
-}
-.assistantFooter button:hover:not(:disabled) {
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-  background: var(--color-hover);
-}
-.assistantFooter button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.attention {
-  @include glass-surface;
-  overflow: hidden;
-  border-radius: $radius-16;
-}
-.sectionHeading {
-  @include flex-between;
-  gap: $spacing-16;
-  padding: $spacing-16 $spacing-24;
-  border-bottom: 1px solid var(--color-divider);
-}
-.sectionHeading h2 {
-  margin: 3px 0 2px;
-  color: var(--color-text-primary);
-  font-size: $font-size-18;
-}
 .sectionHeading > button {
   display: inline-flex;
   min-height: 36px;
@@ -340,13 +73,9 @@
   font-weight: $font-weight-700;
   cursor: pointer;
 }
-.sectionHeading > button:hover:not(:disabled) {
-  background: var(--color-hover);
-}
-.sectionHeading > button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
+
+.sectionHeading > button:hover:not(:disabled) { background: var(--color-hover); }
+
 .checking {
   display: flex;
   min-height: 92px;
@@ -357,85 +86,139 @@
   color: var(--color-text-muted);
   font-size: $font-size-14;
 }
-.checking > :first-child {
-  animation: spin 1s linear infinite;
-}
-.issueList {
+
+/* ── 第一層：待我處理 ─────────────────────────────────────────────
+   一桶一張卡，桶內才是個別項目。桶頭的總數讓人不必讀完就知道量。 */
+
+.bucketGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1px;
+  background: var(--color-divider);
 }
-.issueList > button {
+
+.bucket {
+  @include flex-column;
+  gap: $spacing-8;
+  padding: $spacing-16 $spacing-24 $spacing-16;
+  background: var(--color-surface);
+}
+
+.bucket header {
   display: grid;
-  min-height: 92px;
-  padding: $spacing-16 $spacing-24;
-  grid-template-columns: 40px minmax(0, 1fr) auto 20px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  border: 0;
-  border-right: 1px solid var(--color-divider);
-  border-bottom: 1px solid var(--color-divider);
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
+  gap: 10px;
 }
-.issueList > button:nth-child(2n) {
-  border-right: 0;
-}
-.issueList > button:hover:not(:disabled) {
-  background: var(--color-hover);
-}
-.issueList > button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-.issueIcon {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  place-items: center;
-  border-radius: 10px;
-}
-.issueList button > span:nth-child(2) {
+
+.bucket header div {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
-.issueList strong {
+
+.bucket header strong {
   color: var(--color-text-primary);
-  font-size: $font-size-16;
+  font-size: $font-size-14;
 }
-.issueList small {
+
+.bucket header small {
   @include text-truncate;
   color: var(--color-text-muted);
   font-size: $font-size-12;
 }
-.issueList em {
+
+.bucketIcon {
   display: grid;
-  min-width: 26px;
-  height: 26px;
-  padding: 0 7px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.bucket header em {
+  display: grid;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
   place-items: center;
   border-radius: $radius-pill;
-  font-size: $font-size-12;
+  font-size: $font-size-14;
   font-style: normal;
   font-weight: $font-weight-700;
 }
-.issue_danger .issueIcon,
-.issue_danger em {
+
+.bucket_faults .bucketIcon,
+.bucket_faults header em {
   color: var(--color-danger);
   background: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface));
 }
-.issue_info .issueIcon,
-.issue_info em {
+
+.bucket_review .bucketIcon,
+.bucket_review header em {
   color: var(--color-info);
   background: color-mix(in srgb, var(--color-info) 10%, var(--color-surface));
 }
-.issue_muted .issueIcon,
-.issue_muted em {
+
+.bucket_degraded .bucketIcon,
+.bucket_degraded header em {
   color: var(--color-text-muted);
   background: var(--color-hover);
 }
+
+.bucketItems {
+  @include flex-column;
+  gap: 4px;
+}
+
+.bucketItems button {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 17px minmax(0, 1fr) auto 15px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: $radius-8;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background $transition-base, border-color $transition-base;
+}
+
+.bucketItems button:hover {
+  border-color: var(--color-border);
+  background: var(--color-hover);
+}
+
+.bucketItems button > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bucketItems strong {
+  color: var(--color-text-primary);
+  font-size: $font-size-14;
+  font-weight: $font-weight-500;
+}
+
+.bucketItems small {
+  @include text-truncate;
+  color: var(--color-text-muted);
+  font-size: $font-size-12;
+}
+
+.bucketItems b {
+  color: var(--color-text-primary);
+  font-size: $font-size-14;
+  font-variant-numeric: tabular-nums;
+}
+
+.bucketItems :global(.material-icons-outlined) { color: var(--color-text-muted); }
+
 .allClear {
   display: flex;
   min-height: 88px;
@@ -443,6 +226,7 @@
   align-items: center;
   gap: 12px;
 }
+
 .allClear > span {
   display: grid;
   width: 40px;
@@ -451,87 +235,253 @@
   place-items: center;
   border-radius: 50%;
   color: var(--color-success);
-  background: color-mix(
-    in srgb,
-    var(--color-success) 10%,
-    var(--color-surface)
-  );
+  background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
 }
-.allClear div {
+
+.allClear div { display: flex; flex-direction: column; gap: 3px; }
+.allClear strong { color: var(--color-text-primary); font-size: $font-size-14; }
+.allClear p { margin: 0; color: var(--color-text-muted); font-size: $font-size-12; }
+
+/* ── 第二層：平台現況 ─────────────────────────────────────────────
+   左邊回答「有沒有壞」，右邊回答「還剩多少」。兩張卡各自捲、互不牽動。 */
+
+.stateGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: $spacing-16;
+  padding: $spacing-16 $spacing-24 $spacing-24;
+}
+
+@media (max-width: $breakpoint-lg) {
+  .stateGrid { grid-template-columns: 1fr; }
+}
+
+/* ── 第三層：管理主控台 ───────────────────────────────────────────
+   純導航，所以壓到最輕：無底色卡片、小字連結。 */
+
+.consoleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: $spacing-24;
+  padding: $spacing-24;
+}
+
+.consoleGroup { @include flex-column; gap: 10px; }
+
+.consoleGroup h3 {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  margin: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  font-size: $font-size-12;
+  font-weight: $font-weight-700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-.allClear strong {
+
+.consoleGroup h3 :global(.material-icons-outlined) { color: var(--color-primary); }
+
+.consoleLinks { @include flex-column; gap: 2px; }
+
+.consoleLinks button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: $spacing-8;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: $radius-8;
+  background: none;
   color: var(--color-text-primary);
   font-size: $font-size-14;
+  text-align: left;
+  cursor: pointer;
+  transition: background $transition-base, color $transition-base;
 }
-.allClear p {
+
+.consoleLinks button:hover { background: var(--color-hover); color: var(--color-primary); }
+.consoleLinks button:hover :global(.material-icons-outlined) { color: var(--color-primary); }
+.consoleLinks :global(.material-icons-outlined) { color: var(--color-text-muted); }
+
+/* ── AI 助手：全寬 ───────────────────────────────────────────────
+   回覆裡的診斷表格欄位多，之前擠在半欄要橫向捲才看得完，改成獨佔一列。 */
+
+.assistantSection {
+  @include glass-surface;
+  @include flex-column;
+  gap: $spacing-16;
+  padding: $spacing-24;
+  border-radius: $radius-16;
+}
+
+.assistantSectionFocused {
+  min-height: 0;
+  flex: 1;
+}
+
+.assistantIntro {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.assistantIcon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: $radius-12;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+}
+
+.assistantIntro > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+
+.assistantLabel {
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: $font-weight-700;
+  letter-spacing: 0.08em;
+}
+
+.assistantIntro h2 {
   margin: 0;
+  color: var(--color-text-primary);
+  font-size: $font-size-18;
+}
+
+.assistantIntro p {
+  margin: 2px 0 0;
+  color: var(--color-text-secondary);
+  font-size: $font-size-14;
+  line-height: 1.6;
+}
+
+.assistantActions { display: flex; flex-wrap: wrap; gap: $spacing-8; }
+
+.assistantReset {
+  display: inline-flex;
+  min-height: 34px;
+  padding: 0 12px;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-pill;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  font-size: $font-size-12;
+  cursor: pointer;
+  transition: background $transition-base, color $transition-base;
+}
+
+.assistantReset:hover { background: var(--color-hover); color: var(--color-text-primary); }
+
+.assistantForm { @include flex-column; gap: 10px; }
+
+.assistantInput {
+  display: grid;
+  padding: 12px 14px;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-12;
+  background: var(--color-surface);
+  transition: border-color $transition-base, box-shadow $transition-base;
+}
+
+.assistantInput:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.assistantInput > :global(.material-icons-outlined) { color: var(--color-text-muted); }
+
+.assistantInput textarea {
+  border: 0;
+  outline: none;
+  resize: none;
+  color: var(--color-text-primary);
+  background: transparent;
+  font-family: inherit;
+  font-size: $font-size-14;
+  line-height: 1.6;
+}
+
+.assistantInput textarea::placeholder { color: var(--color-text-muted); }
+
+.assistantInput button {
+  display: inline-flex;
+  min-height: 38px;
+  padding: 0 $spacing-16;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  border-radius: $radius-8;
+  color: var(--color-text-on-primary);
+  background: var(--color-primary);
+  font-size: $font-size-14;
+  font-weight: $font-weight-700;
+  cursor: pointer;
+  transition: background $transition-base;
+}
+
+.assistantInput button:hover:not(:disabled) { background: var(--color-primary-dark); }
+.assistantInput button:disabled { cursor: not-allowed; opacity: 0.4; }
+
+.assistantFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-8;
   color: var(--color-text-muted);
   font-size: $font-size-12;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.assistantFooter button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-pill;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  font-size: $font-size-12;
+  cursor: pointer;
 }
 
-@media (max-width: $breakpoint-xl) {
-  .assistantHero {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "intro"
-      "status"
-      "form";
-  }
+.assistantFooter button:hover:not(:disabled) {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-hover);
 }
-@media (max-width: $breakpoint-lg) {
-  .assistantSectionExpanded .assistantHero {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "intro"
-      "status"
-      "chat";
-  }
-}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; }
+
 @media (max-width: $breakpoint-md) {
-  .page {
-    gap: $spacing-16;
+  .page { gap: $spacing-16; }
+
+  .sectionHeading { padding: $spacing-16; align-items: flex-start; }
+  .bucket { padding: $spacing-16; }
+  .stateGrid,
+  .consoleGrid { padding: $spacing-16; }
+  .assistantSection { padding: $spacing-16; }
+
+  /* 窄版把操作鈕移到標題下一行，標題不要被擠成兩個字 */
+  .assistantIntro {
+    grid-template-columns: 46px minmax(0, 1fr);
   }
-  .header h1 {
-    font-size: $font-size-24;
-  }
-  .assistantHero {
-    padding: $spacing-16;
-    gap: $spacing-16;
-  }
-  .assistantSectionExpanded .assistantHero {
-    grid-template-columns: 1fr;
-    padding: $spacing-16;
-    gap: $spacing-16;
-  }
-  .assistantIntro h2 {
-    font-size: $font-size-18;
-  }
+
+  .assistantActions { grid-column: 1 / -1; }
+  .assistantIntro h2 { font-size: $font-size-18; }
+
   .assistantInput {
     padding: 10px;
     grid-template-columns: 20px minmax(0, 1fr);
   }
-  .assistantInput button {
-    grid-column: 1 / -1;
-    width: 100%;
-  }
-  .sectionHeading {
-    padding: $spacing-16;
-    align-items: flex-start;
-  }
-  .issueList {
-    grid-template-columns: 1fr;
-  }
-  .issueList > button {
-    padding-inline: $spacing-16;
-    border-right: 0;
-  }
+
+  .assistantInput button { grid-column: 1 / -1; width: 100%; justify-content: center; }
 }

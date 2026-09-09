@@ -170,6 +170,121 @@
 }
 
 .msgMarkdown { white-space: normal; }
+
+/* ── 表格內的 UI 元件 ────────────────────────────────────────────────
+   AI 回的診斷表格原本整格都是文字，狀態要靠讀才知道。這裡把 prompt 固定
+   會出現的三種內容轉成可掃讀的元件：狀態徽章、分層晶片、百分比量表。 */
+
+.cellStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px 2px 6px;
+  border: 1px solid transparent;
+  border-radius: $radius-pill;
+  font-size: $font-size-12;
+  font-weight: $font-weight-500;
+  white-space: nowrap;
+}
+
+.cellStatus_ok {
+  border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  color: var(--color-success);
+}
+
+.cellStatus_warn {
+  border-color: color-mix(in srgb, var(--color-pending) 32%, transparent);
+  background: color-mix(in srgb, var(--color-pending) 14%, transparent);
+  color: var(--color-pending);
+}
+
+.cellStatus_bad {
+  border-color: color-mix(in srgb, var(--color-danger) 30%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+  color: var(--color-danger);
+}
+
+.cellStatus_unknown {
+  border-color: var(--color-border);
+  background: var(--color-hover);
+  color: var(--color-text-muted);
+}
+
+/* 分層標籤是固定五層，給各自的色相讓同層的列在表格裡能對齊掃讀 */
+.cellLayer {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: $radius-8;
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: $font-weight-700;
+  letter-spacing: .02em;
+}
+
+.cellLayer_pve {
+  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+}
+
+.cellLayer_vm {
+  border-color: color-mix(in srgb, var(--color-info) 35%, transparent);
+  background: color-mix(in srgb, var(--color-info) 12%, transparent);
+  color: var(--color-info);
+}
+
+.cellLayer_os,
+.cellLayer_service,
+.cellLayer_application {
+  border-color: var(--color-border);
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
+}
+
+/* 量表刻意不上語意色：門檻在監控設定裡，對話這端拿不到，
+   自己編一組紅黃綠會和後端的異常判定打架。語意留給狀態徽章。 */
+.cellMeter {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-8;
+  min-width: 108px;
+}
+
+.cellMeterTrack {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  min-width: 48px;
+  border-radius: $radius-pill;
+  background: var(--color-hover);
+  overflow: hidden;
+}
+
+.cellMeterFill {
+  display: block;
+  height: 100%;
+  border-radius: $radius-pill;
+  background: var(--color-primary);
+}
+
+.cellMeterValue {
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  font-weight: $font-weight-500;
+}
+
+/* 固定診斷格式的段落標題配圖示，長回覆才掃得動 */
+.mdHeadingWithIcon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  :global(.material-icons-outlined) { color: var(--color-primary); }
+}
 .msgPlain { white-space: pre-wrap; }
 
 .toolRow {

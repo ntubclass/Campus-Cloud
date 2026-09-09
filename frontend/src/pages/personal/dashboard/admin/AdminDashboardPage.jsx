@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import AiPveChat from "../../../../components/AiPveChat/AiPveChat";
+import AdminCapacityPanel from "../../../../components/AdminCapacityPanel/AdminCapacityPanel";
 import PveOperationsQuickLook from "../../../../components/PveOperationsQuickLook/PveOperationsQuickLook";
 import MIcon from "../../../../components/MIcon";
 import { useAuth } from "../../../../contexts/AuthContext";
@@ -37,6 +38,73 @@ export function buildAdminIssues(checks, t = defaultT) {
   return issues;
 }
 
+/* 待辦分三桶，因為管理員對它們的反應完全不同：
+   故障要現在動手、審核是別人在等我放行、狀態不明只是資料沒收到。
+   桶子由既有 issue 的 tone 決定，避免同一份清單定義兩次。 */
+const ISSUE_BUCKETS = [
+  { key: "faults", tone: "danger", icon: "crisis_alert" },
+  { key: "review", tone: "info", icon: "approval" },
+  { key: "degraded", tone: "muted", icon: "cloud_off" },
+];
+
+export function groupAdminIssues(issues) {
+  return ISSUE_BUCKETS
+    .map((bucket) => ({
+      ...bucket,
+      items: issues.filter((issue) => issue.tone === bucket.tone),
+    }))
+    .filter((bucket) => bucket.items.length > 0)
+    .map((bucket) => ({
+      ...bucket,
+      total: bucket.items.reduce((sum, issue) => sum + issue.count, 0),
+    }));
+}
+
+/* 管理主控台：照管理員心裡的分類擺，不是照側邊欄的功能表擺。
+   問「這台機器接得上嗎」看平台接取，「這個人能做什麼」看身分與治理。 */
+const CONSOLE_GROUPS = [
+  {
+    key: "platform",
+    icon: "dns",
+    items: [
+      { key: "pveConnections", icon: "device_hub", path: "/pve-connections" },
+      { key: "nodes", icon: "lock", path: "/nodes" },
+      { key: "storage", icon: "storage", path: "/storage" },
+      { key: "gpu", icon: "auto_awesome_mosaic", path: "/gpu-mgmt" },
+    ],
+  },
+  {
+    key: "network",
+    icon: "lan",
+    items: [
+      { key: "ip", icon: "lan", path: "/ip-management" },
+      { key: "domain", icon: "domain", path: "/domain" },
+      { key: "gateway", icon: "router", path: "/gateway" },
+      { key: "firewall", icon: "security", path: "/firewall" },
+    ],
+  },
+  {
+    key: "identity",
+    icon: "admin_panel_settings",
+    items: [
+      { key: "users", icon: "group", path: "/admin" },
+      { key: "ldap", icon: "badge", path: "/ldap" },
+      { key: "quotas", icon: "data_usage", path: "/quotas" },
+      { key: "governance", icon: "policy", path: "/governance" },
+    ],
+  },
+  {
+    key: "operations",
+    icon: "schedule",
+    items: [
+      { key: "scheduler", icon: "settings_input_component", path: "/scheduler" },
+      { key: "jobs", icon: "task_alt", path: "/jobs" },
+      { key: "audit", icon: "receipt_long", path: "/audit" },
+      { key: "aiMonitoring", icon: "monitor_heart", path: "/ai-monitoring" },
+    ],
+  },
+];
+
 export function normalizeAssistantPrompt(value) {
   return String(value ?? "").trim();
 }
@@ -47,7 +115,7 @@ export default function AdminDashboardPage() {
   const { user } = useAuth();
   const [assistantPrompt, setAssistantPrompt] = useState("");
   const [conversationPrompt, setConversationPrompt] = useState("");
-  /* 放大模式：對話佔滿版面，上面的「需要前往確認」暫時收起來 */
+  /* 放大模式：對話佔滿版面，上面的分層總覽暫時收起來 */
   const [focusMode, setFocusMode] = useState(false);
   const [checks, setChecks] = useState({ alerts: 0, failedJobs: 0, requests: 0, batches: 0, aiRequests: 0, unavailable: 0 });
   const [loading, setLoading] = useState(true);
@@ -83,6 +151,7 @@ export default function AdminDashboardPage() {
   }, []);
 
   const issues = useMemo(() => buildAdminIssues(checks, t), [checks, t]);
+  const buckets = useMemo(() => groupAdminIssues(issues), [issues]);
   const name = user?.full_name?.trim() || user?.email?.split("@")[0] || t("AdminDashboardPage.defaultName");
 
   function resetAssistant() {
@@ -107,53 +176,111 @@ export default function AdminDashboardPage() {
   return <div className={`${styles.page} ${focusMode ? styles.pageFocused : ""}`}>
     <PageHeader title={t("AdminDashboardPage.greeting", { name })} subtitle={t("AdminDashboardPage.subtitle")} />
 
-    {!focusMode && <section className={styles.attention} aria-labelledby="admin-attention-title">
-      <div className={styles.sectionHeading}><div><span className={styles.eyebrow}>{t("AdminDashboardPage.priorityLabel")}</span><h2 id="admin-attention-title">{t("AdminDashboardPage.attentionTitle")}</h2></div><button type="button" onClick={() => navigate("/monitoring")}>{t("AdminDashboardPage.openMonitoring")}<MIcon name="arrow_forward" size={16} /></button></div>
-      {loading ? <div className={styles.checking}><MIcon name="sync" size={20} />{t("AdminDashboardPage.checking")}</div> : issues.length ? <div className={styles.issueList}>{issues.map((issue) => <button type="button" key={issue.key} className={styles[`issue_${issue.tone}`]} onClick={() => navigate(issue.path)}><span className={styles.issueIcon}><MIcon name={issue.icon} size={20} /></span><span><strong>{issue.title}</strong><small>{issue.description}</small></span><em>{issue.count}</em><MIcon name="arrow_forward" size={18} /></button>)}</div> : <div className={styles.allClear}><span><MIcon name="check_circle" size={21} /></span><div><strong>{t("AdminDashboardPage.allClearTitle")}</strong><p>{t("AdminDashboardPage.allClearDesc")}</p></div></div>}
-    </section>}
-
-    <section className={`${styles.assistantSection} ${conversationPrompt ? styles.assistantSectionExpanded : ""} ${focusMode ? styles.assistantSectionFocused : ""}`} aria-labelledby="admin-assistant-title">
-      <div className={styles.assistantHero}>
-        <div className={styles.assistantIntro}>
-          <span className={styles.assistantIcon}><MIcon name="support_agent" size={28} /></span>
+    {!focusMode && <>
+      {/* 第一層：需要我決策的事 */}
+      <section className={styles.tier} aria-labelledby="admin-attention-title">
+        <div className={styles.sectionHeading}>
           <div>
-            <span className={styles.assistantLabel}>{t("AdminDashboardPage.assistantLabel")}</span>
-            <h2 id="admin-assistant-title">{t("AdminDashboardPage.assistantTitle")}</h2>
-            {/* 對話開始後這段說明收起，保留硬體快看與對話並排 */}
-            {!conversationPrompt && <p>{t("AdminDashboardPage.assistantIntro")}</p>}
+            <span className={styles.eyebrow}>{t("AdminDashboardPage.tierDecisionLabel")}</span>
+            <h2 id="admin-attention-title">{t("AdminDashboardPage.attentionTitle")}</h2>
+          </div>
+          <button type="button" onClick={() => navigate("/monitoring")}>{t("AdminDashboardPage.openMonitoring")}<MIcon name="arrow_forward" size={16} /></button>
+        </div>
+        {loading ? <div className={styles.checking}><MIcon name="sync" size={20} className={styles.spin} />{t("AdminDashboardPage.checking")}</div>
+          : buckets.length ? <div className={styles.bucketGrid}>
+            {buckets.map((bucket) => <article key={bucket.key} className={`${styles.bucket} ${styles[`bucket_${bucket.key}`]}`}>
+              <header>
+                <span className={styles.bucketIcon}><MIcon name={bucket.icon} size={19} /></span>
+                <div>
+                  <strong>{t(`AdminDashboardPage.bucket${bucket.key}Title`)}</strong>
+                  <small>{t(`AdminDashboardPage.bucket${bucket.key}Desc`)}</small>
+                </div>
+                <em>{bucket.total}</em>
+              </header>
+              <div className={styles.bucketItems}>
+                {bucket.items.map((issue) => <button type="button" key={issue.key} onClick={() => navigate(issue.path)}>
+                  <MIcon name={issue.icon} size={17} />
+                  <span><strong>{issue.title}</strong><small>{issue.description}</small></span>
+                  <b>{issue.count}</b>
+                  <MIcon name="arrow_forward" size={15} />
+                </button>)}
+              </div>
+            </article>)}
+          </div> : <div className={styles.allClear}>
+            <span><MIcon name="check_circle" size={21} /></span>
+            <div><strong>{t("AdminDashboardPage.allClearTitle")}</strong><p>{t("AdminDashboardPage.allClearDesc")}</p></div>
+          </div>}
+      </section>
+
+      {/* 第二層：平台現在的樣子（健康 + 水位並排，兩者都是「現況」不是「待辦」） */}
+      <section className={styles.tier} aria-labelledby="admin-state-title">
+        <div className={styles.sectionHeading}>
+          <div>
+            <span className={styles.eyebrow}>{t("AdminDashboardPage.tierStateLabel")}</span>
+            <h2 id="admin-state-title">{t("AdminDashboardPage.stateTitle")}</h2>
           </div>
         </div>
-        <div className={styles.assistantLeft}>
+        <div className={styles.stateGrid}>
           <PveOperationsQuickLook />
+          <AdminCapacityPanel />
         </div>
-        {conversationPrompt && (
-          <div className={styles.assistantChatColumn}>
-            <div className={styles.assistantActions}>
-              <button type="button" className={styles.assistantReset} onClick={() => setFocusMode((value) => !value)}>
-                <MIcon name={focusMode ? "close_fullscreen" : "open_in_full"} size={16} />
-                {focusMode ? t("AdminDashboardPage.backToOverview") : t("AdminDashboardPage.expandChat")}
-              </button>
-              <button type="button" className={styles.assistantReset} onClick={resetAssistant}>
-                <MIcon name="refresh" size={16} />
-                {t("AdminDashboardPage.askAgain")}
-              </button>
-            </div>
-            <AiPveChat initialPrompt={conversationPrompt} compact={!focusMode} fill={focusMode} />
+      </section>
+
+      {/* 第三層：設定入口。平常不看，要找的時候要找得到 */}
+      <section className={styles.tier} aria-labelledby="admin-console-title">
+        <div className={styles.sectionHeading}>
+          <div>
+            <span className={styles.eyebrow}>{t("AdminDashboardPage.tierConsoleLabel")}</span>
+            <h2 id="admin-console-title">{t("AdminDashboardPage.consoleTitle")}</h2>
           </div>
-        )}
-        {!conversationPrompt && <form className={styles.assistantForm} onSubmit={openAssistant}>
+        </div>
+        <div className={styles.consoleGrid}>
+          {CONSOLE_GROUPS.map((group) => <article key={group.key} className={styles.consoleGroup}>
+            <h3><MIcon name={group.icon} size={17} />{t(`AdminDashboardPage.console${group.key}Title`)}</h3>
+            <div className={styles.consoleLinks}>
+              {group.items.map((item) => <button type="button" key={item.key} onClick={() => navigate(item.path)}>
+                <MIcon name={item.icon} size={16} />
+                {t(`AdminDashboardPage.console${item.key}`)}
+              </button>)}
+            </div>
+          </article>)}
+        </div>
+      </section>
+    </>}
+
+    {/* 最後一層：AI 助手全寬，回覆裡的表格才有完整寬度可展開 */}
+    <section className={`${styles.assistantSection} ${focusMode ? styles.assistantSectionFocused : ""}`} aria-labelledby="admin-assistant-title">
+      <div className={styles.assistantIntro}>
+        <span className={styles.assistantIcon}><MIcon name="support_agent" size={26} /></span>
+        <div>
+          <span className={styles.assistantLabel}>{t("AdminDashboardPage.assistantLabel")}</span>
+          <h2 id="admin-assistant-title">{t("AdminDashboardPage.assistantTitle")}</h2>
+          {!conversationPrompt && <p>{t("AdminDashboardPage.assistantIntro")}</p>}
+        </div>
+        {conversationPrompt && <div className={styles.assistantActions}>
+          <button type="button" className={styles.assistantReset} onClick={() => setFocusMode((value) => !value)}>
+            <MIcon name={focusMode ? "close_fullscreen" : "open_in_full"} size={16} />
+            {focusMode ? t("AdminDashboardPage.backToOverview") : t("AdminDashboardPage.expandChat")}
+          </button>
+          <button type="button" className={styles.assistantReset} onClick={resetAssistant}>
+            <MIcon name="refresh" size={16} />
+            {t("AdminDashboardPage.askAgain")}
+          </button>
+        </div>}
+      </div>
+
+      {conversationPrompt ? <AiPveChat initialPrompt={conversationPrompt} compact={!focusMode} fill={focusMode} />
+        : <form className={styles.assistantForm} onSubmit={openAssistant}>
           <div className={styles.assistantInput}>
             <MIcon name="terminal" size={21} />
             <textarea value={assistantPrompt} onChange={(event) => setAssistantPrompt(event.target.value)} placeholder={t("AdminDashboardPage.promptPlaceholder")} rows={2} autoComplete="off" />
-            <button type="submit" disabled={!assistantPrompt.trim()}><span>{t("AdminDashboardPage.startAsking")}</span><MIcon name="arrow_downward" size={18} /></button>
+            <button type="submit" disabled={!assistantPrompt.trim()}><span>{t("AdminDashboardPage.startAsking")}</span><MIcon name="arrow_forward" size={18} /></button>
           </div>
           <div className={styles.assistantFooter}>
             <span>{t("AdminDashboardPage.suggestionsLabel")}</span>
             {suggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => setAssistantPrompt(suggestion)}>{suggestion}</button>)}
           </div>
         </form>}
-      </div>
     </section>
-
   </div>;
 }
