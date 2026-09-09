@@ -91,13 +91,25 @@
   font-size: $font-size-12;
 }
 
+/* 每列都只有短短一句，單欄排下來右邊會空掉整片、卡片又被拉得很長。
+   寬螢幕並排兩欄，窄螢幕自動疊回單欄。 */
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  align-items: start;
+  gap: $spacing-16 $spacing-32;
+}
+
 .tier { @include flex-column; gap: 2px; }
 
+/* 標題與列共用同一個圖示欄寬，文字左緣才會對齊成一直線 */
 .tier h3 {
-  display: flex;
-  margin: 0 0 2px;
+  display: grid;
+  margin: 0 0 4px;
+  padding-left: $spacing-8;
+  grid-template-columns: 17px auto;
   align-items: center;
-  gap: 5px;
+  gap: 10px;
   color: var(--color-text-secondary);
   font-size: $font-size-12;
   font-weight: $font-weight-700;
@@ -110,8 +122,8 @@
 .row {
   display: grid;
   width: 100%;
-  min-height: 42px;
-  padding: 6px 8px;
+  min-height: 36px;
+  padding: 5px $spacing-8;
   grid-template-columns: 17px minmax(0, 1fr) auto 16px;
   align-items: center;
   gap: 10px;
@@ -126,11 +138,13 @@
 
 .row:hover { background: var(--color-hover); }
 
+/* 名稱與說明同一行；欄寬不夠時說明才換行，不要一開始就固定兩行高 */
 .row > span {
   display: flex;
   min-width: 0;
-  flex-direction: column;
-  gap: 1px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 1px 10px;
 }
 
 .row strong {
@@ -146,6 +160,7 @@
 }
 
 .row b {
+  color: var(--color-text-secondary);
   font-size: $font-size-14;
   font-weight: $font-weight-700;
   font-variant-numeric: tabular-nums;
@@ -157,7 +172,7 @@
 
 .allClear {
   display: flex;
-  min-height: 42px;
+  min-height: 36px;
   padding: $spacing-8 10px;
   align-items: center;
   gap: 8px;

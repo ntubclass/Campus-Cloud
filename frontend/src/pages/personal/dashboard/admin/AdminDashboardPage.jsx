@@ -131,6 +131,8 @@ export default function AdminDashboardPage() {
       </div>
 
       {busy ? <div className={styles.checking}><MIcon name="sync" size={18} className={styles.spin} />{t("AdminDashboardPage.checking")}</div> : <>
+        {/* 兩層並排：每列都很短，單欄排下來會讓右邊整片空著、卡片又拉得很長 */}
+        <div className={styles.tiers}>
         {/* 現在就處理：服務已經受影響，看到就該動手 */}
         {urgent.length > 0 && <div className={`${styles.tier} ${styles.tierNow}`}>
           <h3><MIcon name="priority_high" size={15} />{t("AdminDashboardPage.tierNowTitle")}</h3>
@@ -157,6 +159,7 @@ export default function AdminDashboardPage() {
           <MIcon name="check_circle" size={19} />
           <div><strong>{t("AdminDashboardPage.allClearTitle")}</strong><small>{t("AdminDashboardPage.allClearDesc")}</small></div>
         </div>}
+        </div>
 
         {/* 只是知會：不需要動作的運作數字，收成一條窄帶 */}
         <div className={styles.statsBar}>
