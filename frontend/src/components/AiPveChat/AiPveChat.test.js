@@ -1,7 +1,7 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { AiPveMarkdownContent, sanitizeAiPveContent } from "./AiPveChat";
+import { AiPveMarkdownContent, initialAiPveMessages, sanitizeAiPveContent } from "./AiPveChat";
 
 describe("sanitizeAiPveContent", () => {
   it("removes internal model markers from visible messages", () => {
@@ -28,5 +28,20 @@ describe("sanitizeAiPveContent", () => {
 
     expect(html).not.toContain("<script");
     expect(html).toContain("<strong>安全</strong>");
+  });
+});
+
+describe("initialAiPveMessages", () => {
+  it("skips the greeting when the user already asked something", () => {
+    // 首頁是先在輸入列打字才展開對話，再自我介紹一次只是白佔一格
+    expect(initialAiPveMessages("節點 pve2 為什麼離線？", "我是助手")).toEqual([]);
+    expect(initialAiPveMessages("  1  ", "我是助手")).toEqual([]);
+  });
+
+  it("keeps the greeting when the conversation starts empty", () => {
+    expect(initialAiPveMessages("", "我是助手")).toEqual([
+      { role: "assistant", content: "我是助手" },
+    ]);
+    expect(initialAiPveMessages(null, "我是助手")).toHaveLength(1);
   });
 });

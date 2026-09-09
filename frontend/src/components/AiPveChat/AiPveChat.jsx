@@ -19,6 +19,14 @@ export function sanitizeAiPveContent(value) {
     .trim();
 }
 
+/** 對話的起始訊息。帶著問題進來的（首頁是先打字才展開對話）不要再開場
+ *  自我介紹一次：使用者已經問了，開場白只是白佔一格，模型自己通常也會
+ *  再問候一次。沒帶問題時才需要開場白說明能問什麼。 */
+export function initialAiPveMessages(initialPrompt, introMessage) {
+  if (String(initialPrompt ?? "").trim()) return [];
+  return [{ role: "assistant", content: introMessage }];
+}
+
 /** 將 AI 回覆以安全的 Markdown 呈現，避免格式標記以原始文字顯示。
  *  表格內的狀態標記、分層標籤與百分比再轉成徽章／晶片／量表，見 aiPveRichText。 */
 export function AiPveMarkdownContent({ content }) {
@@ -42,12 +50,9 @@ export default function AiPveChat({ initialPrompt = "", compact = false, fill = 
   const initialPromptHandledRef = useRef(false);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [messages, setMessages] = useState([
-    {
-      role: "assistant",
-      content: t("AiPveChat.introMessage"),
-    },
-  ]);
+  const [messages, setMessages] = useState(
+    () => initialAiPveMessages(initialPromptRef.current, t("AiPveChat.introMessage")),
+  );
   const [chatHistory, setChatHistory] = useState([]);
   const [pendingTool, setPendingTool] = useState(null);
   const [pendingCommand, setPendingCommand] = useState("");

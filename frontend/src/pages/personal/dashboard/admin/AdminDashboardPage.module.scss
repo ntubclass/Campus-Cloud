@@ -35,10 +35,12 @@
 /* ── 待辦 + 硬體狀態並排 ───────────────────────────────────────────
    兩邊內容都不長，疊成上下兩段只會把首屏拉長；並排後一眼看完。 */
 
+/* stretch 而不是 start：兩張卡內容量不同，靠上對齊會讓底部參差成鋸齒，
+   同一排的兩張卡收在同一條底線上才像一組。 */
 .topGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: start;
+  align-items: stretch;
   gap: $spacing-16;
 }
 

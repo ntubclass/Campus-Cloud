@@ -400,7 +400,7 @@
   display: flex;
   align-items: flex-end;
   gap: $spacing-8;
-  padding: 10px 10px 10px $spacing-16;
+  padding: $spacing-8 $spacing-8 $spacing-8 18px;
   border: 1px solid var(--color-border);
   border-radius: $radius-16;
   background: var(--color-surface);
@@ -414,10 +414,10 @@
 
 .composer textarea {
   min-width: 0;
-  min-height: 34px;
+  min-height: 40px;
   max-height: 120px;
   flex: 1;
-  padding: 7px 0;
+  padding: 9px 0;
   border: 0;
   outline: none;
   color: var(--color-text-primary);
