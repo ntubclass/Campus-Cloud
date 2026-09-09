@@ -18,11 +18,17 @@
   flex: 1;
 }
 
+/* 嵌在首頁的助手卡片裡：不要自己再畫一層玻璃，高度也壓低一階，
+   對話框不該在還沒幾則訊息時就先吃掉整個首屏。 */
 .compact {
-  height: min(580px, calc(100vh - 250px));
-  min-height: 380px;
-  border-radius: 0 0 $radius-16 $radius-16;
+  height: min(480px, calc(100vh - 330px));
+  min-height: 320px;
+  padding: 0;
+  border-radius: $radius-8;
+  background: none;
   box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 
