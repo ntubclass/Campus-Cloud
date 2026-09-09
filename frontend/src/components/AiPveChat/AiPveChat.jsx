@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
@@ -25,6 +25,44 @@ export function sanitizeAiPveContent(value) {
 export function initialAiPveMessages(initialPrompt, introMessage) {
   if (String(initialPrompt ?? "").trim()) return [];
   return [{ role: "assistant", content: introMessage }];
+}
+
+export function shouldSubmitAiPveInput(event, composing = false) {
+  const native = event.nativeEvent ?? event;
+  return event.key === "Enter" && !event.shiftKey && !event.ctrlKey
+    && !event.altKey && !event.metaKey && !event.repeat
+    && !composing && !native.isComposing && native.keyCode !== 229;
+}
+
+export function isAiPveLogNearBottom(element) {
+  return element.scrollHeight - element.clientHeight - element.scrollTop <= 48;
+}
+
+const TOOL_LABELS = {
+  get_nodes: "AiPveChat.toolNodes",
+  get_resources: "AiPveChat.toolResources",
+  get_storage: "AiPveChat.toolStorage",
+  get_resource_detail: "AiPveChat.toolResourceDetail",
+  get_cluster: "AiPveChat.toolCluster",
+  get_guest_diagnostic_summary: "AiPveChat.toolGuestDiagnostic",
+  ssh_exec: "AiPveChat.toolSsh",
+};
+
+export function AiPveToolHistory({ tools, t }) {
+  if (!tools?.length) return null;
+  return <details className={styles.toolHistory}>
+    <summary>
+      <MIcon name="chevron_right" size={16} className={styles.toolChevron} />
+      {t("AiPveChat.toolHistory", { count: tools.length })}
+    </summary>
+    <ul>
+      {tools.map((tool, index) => <li key={tool.tool_call_id || `${tool.name}-${index}`}>
+        <span>{t(TOOL_LABELS[tool.name] ?? "AiPveChat.toolOther")}</span>
+        {tool.args?.vmid != null && <small>VMID {String(tool.args.vmid)}</small>}
+        {tool.args?.node && <small>{String(tool.args.node)}</small>}
+      </li>)}
+    </ul>
+  </details>;
 }
 
 /** 將 AI 回覆以安全的 Markdown 呈現，避免格式標記以原始文字顯示。
@@ -56,11 +94,68 @@ export default function AiPveChat({ initialPrompt = "", compact = false, fill = 
   const [chatHistory, setChatHistory] = useState([]);
   const [pendingTool, setPendingTool] = useState(null);
   const [pendingCommand, setPendingCommand] = useState("");
-  const logEndRef = useRef(null);
+  const logRef = useRef(null);
+  const logContentRef = useRef(null);
+  const composerRef = useRef(null);
+  const composingRef = useRef(false);
+  const followLatestRef = useRef(true);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
+
+  function scrollToLatest() {
+    const log = logRef.current;
+    if (!log) return;
+    followLatestRef.current = true;
+    // 只捲動對話區，不讓外層首頁也被 scrollIntoView 拉動。
+    log.scrollTop = log.scrollHeight;
+    setHasNewMessages(false);
+  }
+
+  function handleLogScroll() {
+    const log = logRef.current;
+    if (!log) return;
+    followLatestRef.current = isAiPveLogNearBottom(log);
+    if (followLatestRef.current) setHasNewMessages(false);
+  }
+
+  useLayoutEffect(() => {
+    if (followLatestRef.current) scrollToLatest();
+    else setHasNewMessages(true);
+  }, [messages, isSending, pendingTool]);
+
+  useLayoutEffect(() => {
+    const textarea = composerRef.current;
+    if (!textarea) return;
+    const resize = () => {
+      const style = window.getComputedStyle(textarea);
+      const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      const maxHeight = parseFloat(style.lineHeight) * 4 + padding;
+      textarea.style.height = "0px";
+      const height = textarea.scrollHeight;
+      textarea.style.height = `${Math.min(height, maxHeight)}px`;
+      textarea.style.overflowY = height > maxHeight ? "auto" : "hidden";
+      if (followLatestRef.current) scrollToLatest();
+    };
+    resize();
+    // 切換放大模式或視窗寬度後，文字換行數也會改變。
+    let previousWidth = textarea.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (textarea.clientWidth !== previousWidth) {
+        previousWidth = textarea.clientWidth;
+        resize();
+      }
+    });
+    observer.observe(textarea);
+    return () => observer.disconnect();
+  }, [input]);
 
   useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isSending, pendingTool]);
+    const observer = new ResizeObserver(() => {
+      if (followLatestRef.current) scrollToLatest();
+    });
+    if (logRef.current) observer.observe(logRef.current);
+    if (logContentRef.current) observer.observe(logContentRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const canSend = input.trim().length > 0 && !isSending && !pendingTool;
 
@@ -97,6 +192,8 @@ export default function AiPveChat({ initialPrompt = "", compact = false, fill = 
     const message = String(rawMessage ?? "").trim();
     if (!message || isSending || pendingTool) return;
 
+    followLatestRef.current = true;
+    setHasNewMessages(false);
     setInput("");
     setIsSending(true);
     setMessages((previous) => [...previous, { role: "user", content: message }]);
@@ -131,6 +228,12 @@ export default function AiPveChat({ initialPrompt = "", compact = false, fill = 
   function handleSubmit(event) {
     event.preventDefault();
     sendMessage(input);
+  }
+
+  function handleComposerKeyDown(event) {
+    if (!shouldSubmitAiPveInput(event, composingRef.current)) return;
+    event.preventDefault();
+    if (canSend) sendMessage(input);
   }
 
   async function handleConfirm(approved) {
@@ -197,7 +300,9 @@ export default function AiPveChat({ initialPrompt = "", compact = false, fill = 
 
   return (
     <div className={`${styles.chatCard} ${compact ? styles.compact : ""} ${fill ? styles.fill : ""}`}>
-      <div className={styles.chatLog} aria-live="polite">
+      <div className={styles.chatViewport}>
+      <div ref={logRef} className={styles.chatLog} onScroll={handleLogScroll} aria-live="polite" role="log" aria-label={t("AiPveChat.conversationLabel")}>
+        <div ref={logContentRef} className={styles.chatLogContent}>
         {messages.map((message, index) => {
           const isUser = message.role === "user";
           return (
@@ -218,19 +323,7 @@ export default function AiPveChat({ initialPrompt = "", compact = false, fill = 
                 ) : (
                   <AiPveMarkdownContent content={message.content} />
                 )}
-                {message.tools?.length > 0 && (
-                  <div className={styles.toolRow}>
-                    <span className={styles.toolLabel}>
-                      <MIcon name="terminal" size={13} />
-                      {t("AiPveChat.toolCallsLabel")}
-                    </span>
-                    {message.tools.map((tool, toolIndex) => (
-                      <span key={`${tool.name}-${toolIndex}`} className={styles.toolBadge}>
-                        {tool.name}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <AiPveToolHistory tools={message.tools} t={t} />
               </div>
             </div>
           );
@@ -285,16 +378,25 @@ export default function AiPveChat({ initialPrompt = "", compact = false, fill = 
             </div>
           </div>
         )}
-        <div ref={logEndRef} />
+        </div>
+      </div>
+      {hasNewMessages && <button type="button" className={styles.latestMessage} onClick={scrollToLatest}>
+        <MIcon name="arrow_downward" size={15} />{t("AiPveChat.latestMessage")}
+      </button>}
       </div>
 
       <form className={styles.composer} onSubmit={handleSubmit}>
         <textarea
+          ref={composerRef}
           rows={1}
           value={input}
           onChange={(event) => setInput(event.target.value)}
+          onKeyDown={handleComposerKeyDown}
+          onCompositionStart={() => { composingRef.current = true; }}
+          onCompositionEnd={() => { composingRef.current = false; }}
+          aria-label={t("AiPveChat.composerLabel")}
+          title={t("AiPveChat.composerKeyboardHint")}
           placeholder={t("AiPveChat.composerPlaceholder")}
-          disabled={isSending || Boolean(pendingTool)}
         />
         <div className={styles.composerActions}>
           <button type="submit" className={styles.btnPrimary} disabled={!canSend}>
