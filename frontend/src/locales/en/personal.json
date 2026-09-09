@@ -1113,5 +1113,7 @@
   "SharingCard.transferFailed": "Transfer failed",
   "AdminDashboardPage.bucketfaultsTitle": "System faults",
   "AdminDashboardPage.bucketreviewTitle": "Waiting on my review",
-  "AdminDashboardPage.bucketdegradedTitle": "State unconfirmed"
+  "AdminDashboardPage.bucketdegradedTitle": "State unconfirmed",
+  "AdminDashboardPage.attentionSummary": "{{count}} item(s) need attention",
+  "AdminDashboardPage.attentionSummaryClear": "Nothing waiting on you"
 }

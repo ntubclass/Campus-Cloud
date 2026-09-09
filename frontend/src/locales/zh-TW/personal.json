@@ -1111,5 +1111,7 @@
   "SharingCard.transferFailed": "轉移失敗",
   "AdminDashboardPage.bucketfaultsTitle": "系統故障",
   "AdminDashboardPage.bucketreviewTitle": "等待我審核",
-  "AdminDashboardPage.bucketdegradedTitle": "狀態無法確認"
+  "AdminDashboardPage.bucketdegradedTitle": "狀態無法確認",
+  "AdminDashboardPage.attentionSummary": "共 {{count}} 件需要處理",
+  "AdminDashboardPage.attentionSummaryClear": "目前沒有待處理項目"
 }

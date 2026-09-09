@@ -1083,5 +1083,7 @@
   "SharingCard.transferFailed": "譲渡に失敗しました",
   "AdminDashboardPage.bucketfaultsTitle": "システム障害",
   "AdminDashboardPage.bucketreviewTitle": "承認待ち",
-  "AdminDashboardPage.bucketdegradedTitle": "状態を確認できません"
+  "AdminDashboardPage.bucketdegradedTitle": "状態を確認できません",
+  "AdminDashboardPage.attentionSummary": "対応が必要な項目 {{count}} 件",
+  "AdminDashboardPage.attentionSummaryClear": "対応待ちの項目はありません"
 }

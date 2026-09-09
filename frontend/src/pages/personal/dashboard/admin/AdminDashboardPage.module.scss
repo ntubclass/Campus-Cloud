@@ -66,6 +66,13 @@
   line-height: 1.35;
 }
 
+.cardSubtitle {
+  display: block;
+  margin-top: 3px;
+  color: var(--color-text-muted);
+  font-size: $font-size-12;
+}
+
 .cardHead > button {
   display: inline-flex;
   min-height: 30px;
@@ -86,7 +93,7 @@
 
 .checking {
   display: flex;
-  min-height: 92px;
+  min-height: 60px;
   align-items: center;
   justify-content: center;
   gap: $spacing-8;
@@ -170,10 +177,13 @@
    還沒問問題前它只是一條輸入列：標題一行、輸入一行、建議一行。
    對話開始後才展開，對話本身不再自己畫卡片（見 AiPveChat.compact）。 */
 
+/* 助手是整頁最大的一張卡，內距吃 spacing scale 上一階；
+   上排兩張小卡維持 16，跟 QuickLook 一致。 */
 .assistant {
   @include surface-card;
   @include flex-column;
-  gap: 10px;
+  padding: $spacing-24;
+  gap: 14px;
 }
 
 .assistantFocused {

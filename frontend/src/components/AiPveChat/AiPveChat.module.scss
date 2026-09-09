@@ -6,7 +6,7 @@
 .chatCard {
   @include flex-column;
   min-width: 0;
-  gap: $spacing-8;
+  gap: 14px;
   height: min(600px, calc(100vh - 260px));
   min-height: 420px;
 }
@@ -18,9 +18,12 @@
   flex: 1;
 }
 
+/* 嵌在首頁時高度跟著內容走、只設上限。固定高度在只有兩三則訊息時
+   會撐出一大片空白，輸入框就變成飄在下面的另一個盒子。 */
 .compact {
-  height: min(460px, calc(100vh - 340px));
-  min-height: 300px;
+  height: auto;
+  min-height: 0;
+  max-height: min(460px, calc(100vh - 340px));
 }
 
 .chatLog {
@@ -397,7 +400,7 @@
   display: flex;
   align-items: flex-end;
   gap: $spacing-8;
-  padding: 8px 8px 8px 14px;
+  padding: 10px 10px 10px $spacing-16;
   border: 1px solid var(--color-border);
   border-radius: $radius-16;
   background: var(--color-surface);

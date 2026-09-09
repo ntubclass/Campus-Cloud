@@ -102,6 +102,10 @@ export default function AdminDashboardPage() {
 
   const issues = useMemo(() => buildAdminIssues(checks, t), [checks, t]);
   const buckets = useMemo(() => groupAdminIssues(issues), [issues]);
+  const pendingTotal = useMemo(
+    () => issues.reduce((sum, issue) => sum + issue.count, 0),
+    [issues],
+  );
   const name = user?.full_name?.trim() || user?.email?.split("@")[0] || t("AdminDashboardPage.defaultName");
 
   function resetAssistant() {
@@ -131,10 +135,18 @@ export default function AdminDashboardPage() {
     {!focusMode && <div className={styles.topGrid}>
       <section className={styles.card} aria-labelledby="admin-attention-title">
         <div className={styles.cardHead}>
-          <h2 id="admin-attention-title">{t("AdminDashboardPage.attentionTitle")}</h2>
+          {/* 副標與右卡的「更新於…」同樣是兩行，否則兩張卡的內容起始高度差一截 */}
+          <div>
+            <h2 id="admin-attention-title">{t("AdminDashboardPage.attentionTitle")}</h2>
+            <span className={styles.cardSubtitle}>
+              {loading ? t("AdminDashboardPage.checking")
+                : pendingTotal ? t("AdminDashboardPage.attentionSummary", { count: pendingTotal })
+                : t("AdminDashboardPage.attentionSummaryClear")}
+            </span>
+          </div>
           <button type="button" onClick={() => navigate("/monitoring")}>{t("AdminDashboardPage.openMonitoring")}<MIcon name="arrow_forward" size={15} /></button>
         </div>
-        {loading ? <div className={styles.checking}><MIcon name="sync" size={18} className={styles.spin} />{t("AdminDashboardPage.checking")}</div>
+        {loading ? <div className={styles.checking}><MIcon name="sync" size={18} className={styles.spin} /></div>
           : buckets.length ? <div className={styles.buckets}>
             {buckets.map((bucket) => <div key={bucket.key} className={`${styles.bucket} ${styles[`bucket_${bucket.key}`]}`}>
               <div className={styles.bucketHead}>
