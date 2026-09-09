@@ -290,6 +290,7 @@ export default function AiPveChat({ initialPrompt = "", compact = false, fill = 
 
       <form className={styles.composer} onSubmit={handleSubmit}>
         <textarea
+          rows={1}
           value={input}
           onChange={(event) => setInput(event.target.value)}
           placeholder={t("AiPveChat.composerPlaceholder")}
